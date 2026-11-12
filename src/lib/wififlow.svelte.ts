@@ -1,6 +1,6 @@
 // Passar um aparelho do USB para o Wi-Fi, do jeito que se faz à mão:
-// lê o IP, roda `adb tcpip PORTA`, pede para tirar o cabo, roda `adb connect IP:PORTA`
-// e confirma que ele apareceu pronto na lista. Começa sozinho quando um aparelho é
+// lê o IP, roda `adb tcpip PORTA`, roda `adb connect IP:PORTA` e confirma que ele
+// apareceu pronto na lista. Não espera o cabo sair: só avisa que ele já pode sair. Começa sozinho quando um aparelho é
 // ligado por USB com o app aberto (Configurações › Aparelho novo por USB), e também
 // pelo cartão, pelos detalhes e pela tela Conectar.
 import { api } from './ipc';
@@ -8,7 +8,7 @@ import { classify, type AdbError } from './errors';
 import { t } from './i18n.svelte';
 import { addRecent, app, deviceName, findDevice, saveSettings, setTarget } from './state.svelte';
 
-export type StepId = 'ip' | 'tcpip' | 'unplug' | 'connect';
+export type StepId = 'ip' | 'tcpip' | 'connect';
 export type StepState = 'pending' | 'running' | 'done' | 'error' | 'skipped';
 
 export interface WifiFlow {
@@ -37,7 +37,13 @@ const handled = new Map<string, number>();
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 function freshSteps(): Record<StepId, StepState> {
-  return { ip: 'pending', tcpip: 'pending', unplug: app.settings.askUnplug ? 'pending' : 'skipped', connect: 'pending' };
+  return { ip: 'pending', tcpip: 'pending', connect: 'pending' };
+}
+
+/** Passou pelo fluxo há pouco: tirar o cabo dele agora é esperado, não um aparelho perdido. */
+export function recentlyHandled(serial: string): boolean {
+  const last = handled.get(serial);
+  return !!last && Date.now() - last < 10 * 60_000;
 }
 
 export function isFlowSerial(serial: string): boolean {
@@ -47,7 +53,8 @@ export function isFlowSerial(serial: string): boolean {
 /** Abre o fluxo. `ask`: mostra a pergunta antes (modo "Perguntar" ou outro já rodando). */
 export function startWifiFlow(serial: string, opts: { auto?: boolean; ask?: boolean; port?: number } = {}): void {
   if (flow.current && flow.current.phase === 'run') {
-    if (!flow.queue.some((q) => q.serial === serial)) flow.queue.push({ serial, auto: !!opts.auto });
+    // Já tem um rodando (são poucos segundos): este entra na fila, que aparece na janela.
+    if (flow.current.serial !== serial && !flow.queue.some((q) => q.serial === serial)) flow.queue.push({ serial, auto: !!opts.auto });
     return;
   }
   flow.current = {
@@ -127,12 +134,6 @@ export function restart(): void {
   run('ip');
 }
 
-/** "Continuar sem tirar o cabo". */
-export function skipUnplug(): void {
-  unplugSkipped = true;
-}
-let unplugSkipped = false;
-
 function fail(f: WifiFlow, step: StepId, error: AdbError | null, status = '') {
   f.steps[step] = 'error';
   f.phase = 'failed';
@@ -146,7 +147,7 @@ async function run(from: StepId): Promise<void> {
   const f = flow.current;
   if (!f) return;
   const alive = () => my === runId && flow.current === f;
-  const order: StepId[] = ['ip', 'tcpip', 'unplug', 'connect'];
+  const order: StepId[] = ['ip', 'tcpip', 'connect'];
   const address = () => `${f.ip}:${f.port}`;
 
   for (const step of order.slice(order.indexOf(from))) {
@@ -169,7 +170,7 @@ async function run(from: StepId): Promise<void> {
       // Já está no Wi-Fi com esse endereço: não precisa mexer no adbd.
       const existing = findDevice(address());
       if (existing?.stateKind === 'device') {
-        f.steps = { ip: 'done', tcpip: 'skipped', unplug: 'skipped', connect: 'done' };
+        f.steps = { ip: 'done', tcpip: 'skipped', connect: 'done' };
         f.phase = 'done';
         f.result = t('wifi.alreadyWifi', { name: f.name, address: address() });
         if (app.settings.targetSerial === f.serial) setTarget(address());
@@ -187,23 +188,8 @@ async function run(from: StepId): Promise<void> {
       } catch (e) {
         return fail(f, 'tcpip', classify(String(e)));
       }
-      // O adbd reinicia: o USB some e volta em poucos segundos.
+      // O adbd reinicia: o USB some e volta em poucos segundos; o connect espera isso.
       await sleep(2500);
-    }
-
-    if (step === 'unplug') {
-      f.status = t('wifi.unplugNow');
-      unplugSkipped = false;
-      let goneSince = 0;
-      while (alive() && !unplugSkipped) {
-        const present = !!findDevice(f.serial);
-        if (!present) {
-          if (!goneSince) goneSince = Date.now();
-          if (Date.now() - goneSince > 1200) break;
-        } else goneSince = 0;
-        await sleep(300);
-      }
-      if (!alive()) return;
     }
 
     if (step === 'connect') {

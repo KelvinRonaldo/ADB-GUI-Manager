@@ -220,7 +220,6 @@
           >{t('settings.wifiPort')}
           <input class="input tiny" type="number" min="1" max="65535" bind:value={app.settings.wifiPort} onchange={saveSettings} /></label
         >
-        <label class="check"><input type="checkbox" bind:checked={app.settings.askUnplug} onchange={saveSettings} /> {t('settings.askUnplug')}</label>
         {#if app.settings.usbToWifiSkip.length}
           <div class="row">
             <span class="muted small">{t('settings.skipList', { n: app.settings.usbToWifiSkip.length })}</span>

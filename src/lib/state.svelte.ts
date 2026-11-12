@@ -4,7 +4,7 @@ import { friendlyName, tcpAddress } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
 import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, Settings, Summary } from './types';
-import { isFlowSerial, onUsbReady } from './wififlow.svelte';
+import { isFlowSerial, onUsbReady, recentlyHandled } from './wififlow.svelte';
 
 export const DEFAULT_SETTINGS: Settings = {
   adbMode: 'auto',
@@ -35,7 +35,6 @@ export const DEFAULT_SETTINGS: Settings = {
   targetSerial: '',
   usbToWifi: 'auto',
   wifiPort: 5555,
-  askUnplug: true,
   usbToWifiSkip: [],
 };
 
@@ -272,9 +271,11 @@ function ensureTarget(): void {
   if (first) setTarget(first.serial);
 }
 
-function onDevices(list: Device[]): void {
+/** `first`: primeira lista depois de conectar ao servidor (ao abrir ou depois de reiniciar):
+ * os aparelhos dela já estavam ligados, então não disparam avisos nem o Wi-Fi automático. */
+function onDevices(list: Device[], first = false): void {
   const before = new Map(app.devices.map((d) => [d.serial, d]));
-  const initial = !app.devicesLoaded;
+  const initial = !app.devicesLoaded || first;
   app.devices = list;
   app.devicesLoaded = true;
   const now = new Set(list.map((d) => d.serial));
@@ -299,7 +300,7 @@ function onDevices(list: Device[]): void {
   // Um aparelho pronto que sumiu: Wi-Fi tenta voltar sozinho; USB só avisa.
   if (!initial && app.serverRunning) {
     for (const [serial, prev] of before) {
-      if (now.has(serial) || prev.stateKind !== 'device' || isFlowSerial(serial)) continue;
+      if (now.has(serial) || prev.stateKind !== 'device' || isFlowSerial(serial) || recentlyHandled(serial)) continue;
       const name = friendlyName(prev, app.summaries[serial]);
       if (tcpAddress(serial)) {
         app.lost[serial] = { serial, name, attempts: 0, nextAt: Date.now() + RETRY_EVERY_MS, gaveUp: false, busy: false };
@@ -426,7 +427,7 @@ export async function boot(): Promise<void> {
   // passado, então a lista atual vem por devices_current logo em seguida.
   if (!started) {
     started = true;
-    await listen<Device[]>('devices', onDevices);
+    await listen<{ devices: Device[]; first: boolean }>('devices', (e) => onDevices(e.devices, e.first));
     await listen<LogEntry>('cmdlog', onLog);
     await listen<{ running: boolean }>('server', (p) => (app.serverRunning = p.running));
     window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
@@ -441,7 +442,7 @@ export async function boot(): Promise<void> {
 
 export async function loadCurrentDevices(): Promise<void> {
   const list = await api.devicesCurrent().catch(() => [] as Device[]);
-  if (list.length || !app.devicesLoaded) onDevices(list);
+  if (list.length || !app.devicesLoaded) onDevices(list, true);
 }
 
 let lastSummaryRefresh = Date.now();

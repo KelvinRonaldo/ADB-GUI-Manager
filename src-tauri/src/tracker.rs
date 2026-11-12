@@ -11,6 +11,14 @@ use std::time::Duration;
 use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncReadExt;
 
+/// `first`: a primeira lista depois de (re)conectar ao servidor. Os aparelhos dela já
+/// estavam ligados; só os que aparecem depois são "novos" (Wi-Fi automático, avisos).
+#[derive(serde::Serialize, Clone)]
+pub struct DevicesEvent {
+    pub devices: Vec<crate::parse::Device>,
+    pub first: bool,
+}
+
 pub fn spawn(app: AppHandle, st: Arc<AppState>) {
     tauri::async_runtime::spawn(async move {
         loop {
@@ -40,6 +48,7 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                 None => continue,
             };
             let mut acc: Vec<u8> = Vec::new();
+            let mut first = true;
             let mut buf = [0u8; 8192];
             loop {
                 tokio::select! {
@@ -55,7 +64,8 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                                     if let Ok(mut d) = st.devices.lock() {
                                         *d = list.clone();
                                     }
-                                    let _ = app.emit("devices", list);
+                                    let _ = app.emit("devices", DevicesEvent { devices: list, first });
+                                    first = false;
                                 }
                             }
                         }
@@ -67,7 +77,7 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
             if let Ok(mut d) = st.devices.lock() {
                 d.clear();
             }
-            let _ = app.emit("devices", Vec::<crate::parse::Device>::new());
+            let _ = app.emit("devices", DevicesEvent { devices: Vec::new(), first: true });
             let _ = app.emit("server", serde_json::json!({ "running": false }));
             tokio::time::sleep(Duration::from_millis(1200)).await;
         }

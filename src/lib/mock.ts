@@ -34,7 +34,7 @@ if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__mockPlugUsb = (fail = false) => {
     failConnect = fail;
     DEVICES = [...DEVICES.filter((d) => d.serial !== NEW_USB.serial && d.serial !== `${NEW_IP}:5555`), NEW_USB];
-    emit('devices', DEVICES);
+    emit('devices', { devices: DEVICES, first: false });
   };
 }
 
@@ -157,7 +157,7 @@ function output(rest: string[], serial: string | null): { code: number; stdout: 
       if (failConnect) return { code: 0, stdout: `failed to connect to ${rest[1]}: Connection refused\n`, stderr: '' };
       setTimeout(() => {
         DEVICES = [...DEVICES.filter((d) => d.serial !== rest[1]), { ...NEW_USB, serial: rest[1], connection: 'wifi', usb: null, transportId: '12' }];
-        emit('devices', DEVICES);
+        emit('devices', { devices: DEVICES, first: false });
       }, 300);
     }
     return { code: 0, stdout: `connected to ${rest[1]}\n`, stderr: '' };
@@ -166,7 +166,7 @@ function output(rest: string[], serial: string | null): { code: number; stdout: 
     if (serial === NEW_USB.serial) {
       setTimeout(() => {
         DEVICES = DEVICES.filter((d) => d.serial !== NEW_USB.serial);
-        emit('devices', DEVICES);
+        emit('devices', { devices: DEVICES, first: false });
       }, 4000);
     }
     return { code: 0, stdout: `restarting in TCP mode port: ${rest[1]}\n`, stderr: '' };
@@ -221,7 +221,7 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): Promise<unknown> {
   switch (cmd) {
     case 'app_init': {
-      setTimeout(() => emit('devices', adbOk ? DEVICES : []), 400);
+      setTimeout(() => emit('devices', { devices: adbOk ? DEVICES : [], first: true }), 400);
       const info: InitInfo = {
         adb: adbOk ? { path: '/usr/bin/adb', source: 'path', version: { adbVersion: '1.0.41', toolsVersion: '35.0.2', installedAs: '/usr/bin/adb' } } : null,
         checked: [
@@ -252,7 +252,7 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
     }
     case 'adb_use':
       adbOk = true;
-      setTimeout(() => emit('devices', DEVICES), 300);
+      setTimeout(() => emit('devices', { devices: DEVICES, first: true }), 300);
       return { path: String(a.path || '/usr/bin/adb'), source: String(a.mode), version: { adbVersion: '1.0.41', toolsVersion: '35.0.2' } };
     case 'settings_save':
       settings = a.settings as Record<string, unknown>;

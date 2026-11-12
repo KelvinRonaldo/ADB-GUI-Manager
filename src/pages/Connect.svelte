@@ -266,7 +266,7 @@
                 <label class="field">{t('connect.port')}<input class="input mono" inputmode="numeric" bind:value={usbPort} /></label>
               </div>
               <button type="button" class="btn primary" disabled={busy || !usbSerial} onclick={doUsbToWifi}>{t('connect.usbButton')}</button>
-              <div class="mono muted small">adb -s {usbSerial} tcpip {usbPort} → {t('wifi.step.unplug').toLowerCase()} → adb connect {app.summaries[usbSerial]?.wifiIp ?? 'IP'}:{usbPort}</div>
+              <div class="mono muted small">adb -s {usbSerial} tcpip {usbPort} → adb connect {app.summaries[usbSerial]?.wifiIp ?? 'IP'}:{usbPort}</div>
             {:else}
               <div class="muted">{t('connect.noUsb')}</div>
             {/if}

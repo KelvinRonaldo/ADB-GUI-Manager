@@ -35,12 +35,14 @@ USB com o app aberto, o app faz sozinho a sequência:
 
 1. Lê o IP do aparelho na rede (`adb shell ip -f inet addr show`, preferindo Wi-Fi e depois cabo).
 2. Roda `adb tcpip 5555`.
-3. Pede para tirar o cabo USB e espera ele sair (dá para continuar sem tirar).
-4. Roda `adb connect IP:5555`, com até seis tentativas, e confirma que o aparelho apareceu pronto na lista.
-5. Diz se funcionou. Se falhar, mostra o motivo, com tentar de novo e começar de novo.
+3. Roda `adb connect IP:5555`, com até seis tentativas, e confirma que o aparelho apareceu pronto na lista.
+4. Diz se funcionou. Se falhar, mostra o motivo, com tentar de novo e começar de novo.
 
-Em Configurações › Aparelho novo por USB: passar sozinho (padrão), perguntar ou não fazer nada; a porta TCP; e se
-pede para tirar o cabo. Os aparelhos que já estavam ligados quando o app abriu não mudam. O "Passar para Wi-Fi" do
+O cabo não precisa sair: depois do `tcpip`, a janela só avisa que ele já pode ser tirado, se você quiser. Se outro
+aparelho for pedido enquanto um fluxo roda, ele entra na fila, e a janela mostra quem vem em seguida.
+
+Em Configurações › Aparelho novo por USB: passar sozinho (padrão), perguntar ou não fazer nada, e a porta TCP. Os
+aparelhos que já estavam ligados quando o app abriu, ou quando o servidor do adb reiniciou, não mudam. O "Passar para Wi-Fi" do
 cartão, dos detalhes e da tela Conectar usa o mesmo fluxo.
 
 ## Como abrir com outro adb
@@ -98,7 +100,7 @@ src/                     interface (Svelte 5 + TypeScript)
   lib/errors.ts          classificação das falhas do adb em causa e ação
   lib/locales/           textos pt-BR e en-US (mesmas chaves, checado no build e nos testes)
   lib/state.svelte.ts    estado global, aparelhos, reconexão, guias
-  lib/wififlow.svelte.ts fluxo USB → Wi-Fi (IP, tcpip, tirar o cabo, connect)
+  lib/wififlow.svelte.ts fluxo USB → Wi-Fi (IP, tcpip, connect)
 src-tauri/src/           backend (Rust)
   locate.rs              onde está o adb e validação por `adb version`
   runner.rs              execução de comandos e registro

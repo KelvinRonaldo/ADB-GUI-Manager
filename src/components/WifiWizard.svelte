@@ -4,18 +4,21 @@
   import ErrorPanel from './ErrorPanel.svelte';
   import { t } from '../lib/i18n.svelte';
   import { navigate } from '../lib/state.svelte';
-  import { close, confirmAsk, flow, restart, retry, skipDevice, skipUnplug, type StepId } from '../lib/wififlow.svelte';
+  import { deviceName } from '../lib/state.svelte';
+  import { close, confirmAsk, flow, restart, retry, skipDevice, type StepId } from '../lib/wififlow.svelte';
   import type { ErrorAction } from '../lib/errors';
 
   const f = $derived(flow.current);
-  const STEPS: StepId[] = ['ip', 'tcpip', 'unplug', 'connect'];
+  const STEPS: StepId[] = ['ip', 'tcpip', 'connect'];
+  const queued = $derived(flow.queue.map((q) => deviceName(q.serial)).join(', '));
+  // Depois do tcpip a conexão pelo Wi-Fi não depende mais do cabo.
+  const canUnplug = $derived(!!f && f.steps.tcpip === 'done' && f.phase !== 'failed');
   const address = $derived(f ? `${f.ip || 'IP'}:${f.port}` : '');
 
   function label(s: StepId): string {
     if (!f) return '';
     if (s === 'ip') return f.ip ? t('wifi.step.ipDone', { ip: f.ip }) : t('wifi.step.ip');
     if (s === 'tcpip') return t('wifi.step.tcpip', { port: f.port });
-    if (s === 'unplug') return t('wifi.step.unplug');
     return t('wifi.step.connect', { address });
   }
 
@@ -51,16 +54,14 @@
         {/each}
       </ol>
 
-      {#if f.phase === 'run' && f.steps.unplug === 'running'}
-        <div class="unplug" role="status">
-          <Icon name="usb" size={28} />
-          <div>
-            <div class="big">{t('wifi.unplugNow')}</div>
-            <div class="muted small">{t('wifi.unplugWaiting')}</div>
-          </div>
-        </div>
-      {:else if f.phase === 'run' && f.status}
+      {#if f.phase === 'run' && f.status}
         <div class="status" role="status">{f.status}</div>
+      {/if}
+      {#if canUnplug}
+        <div class="unplug" role="note">
+          <Icon name="usb" size={22} />
+          <span>{t('wifi.canUnplug')}</span>
+        </div>
       {/if}
 
       {#if f.phase === 'done'}
@@ -77,13 +78,14 @@
       {/if}
     {/if}
 
+    {#if queued}<div class="queue muted">{t('wifi.next', { names: queued })}</div>{/if}
+
     {#snippet footer()}
       {#if f.phase === 'ask'}
         <button type="button" class="linkbtn plain" onclick={skipDevice}>{t('wifi.neverDevice')}</button>
         <button type="button" class="btn" onclick={close}>{t('wifi.notNow')}</button>
         <button type="button" class="btn primary" onclick={confirmAsk}>{t('wifi.yes')}</button>
       {:else if f.phase === 'run'}
-        {#if f.steps.unplug === 'running'}<button type="button" class="btn" onclick={skipUnplug}>{t('wifi.skipUnplug')}</button>{/if}
         <button type="button" class="btn" onclick={close}>{t('common.cancel')}</button>
       {:else if f.phase === 'failed'}
         <button type="button" class="btn" onclick={close}>{t('common.close')}</button>
@@ -156,21 +158,14 @@
   .unplug {
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: var(--warn-bg);
-    color: var(--warn-fg);
+    gap: 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 10px 14px;
+    font-size: 13px;
   }
-  .unplug .muted {
-    color: inherit;
-    opacity: 0.85;
-  }
-  .big {
-    font-size: 16px;
-    font-weight: 700;
-  }
-  .small {
+  .queue {
     font-size: 12px;
   }
   .status {
