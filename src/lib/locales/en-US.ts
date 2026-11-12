@@ -36,6 +36,7 @@ export const enUS: Record<keyof typeof ptBR, string> = {
 
   'nav.label': 'Main navigation',
   'nav.devices': 'Devices',
+  'nav.details': 'Device details',
   'nav.connect': 'Connect',
   'nav.apps': 'Apps',
   'nav.files': 'Files',

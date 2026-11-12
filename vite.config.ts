@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     emptyOutDir: true,
     sourcemap: mode !== 'production',
+    chunkSizeWarningLimit: 2000,
   },
   test: {
     include: ['src/**/*.test.ts'],

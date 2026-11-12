@@ -34,6 +34,7 @@ export const ptBR = {
 
   'nav.label': 'Navegação principal',
   'nav.devices': 'Aparelhos',
+  'nav.details': 'Detalhes do aparelho',
   'nav.connect': 'Conectar',
   'nav.apps': 'Apps',
   'nav.files': 'Arquivos',

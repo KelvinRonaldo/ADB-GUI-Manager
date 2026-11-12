@@ -488,7 +488,7 @@ export interface Built {
   missing: L[];
 }
 
-export function buildArgs(def: CommandDef, variant: Variant, values: Values): Built {
+export function buildArgs(_def: CommandDef, variant: Variant, values: Values): Built {
   const missing: L[] = [];
   if (variant.build) return { args: variant.build(values), missing };
   const args = [...variant.prefix];

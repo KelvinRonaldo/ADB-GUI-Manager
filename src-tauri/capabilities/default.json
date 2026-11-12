@@ -2,9 +2,12 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Só o que a interface usa. Arquivos do computador passam pelos comandos do app, que recebem caminhos escolhidos nos diálogos.",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
+    "core:window:allow-close",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
