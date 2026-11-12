@@ -32,13 +32,29 @@ fn cli_adb() -> Option<String> {
     None
 }
 
+/// Pasta de dados da versão portátil, ao lado do executável.
+#[cfg(feature = "portable")]
+fn portable_base() -> Option<std::path::PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let base = exe.parent()?.join("adb-gui-manager-data");
+    std::fs::create_dir_all(&base).ok()?;
+    Some(base)
+}
+
 pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let config_dir = app.path().app_config_dir()?;
-            let data_dir = app.path().app_data_dir()?;
+            #[cfg(feature = "portable")]
+            let portable = portable_base();
+            #[cfg(not(feature = "portable"))]
+            let portable: Option<std::path::PathBuf> = None;
+            // Portátil numa pasta somente leitura: cai para o perfil do usuário em vez de não abrir.
+            let (config_dir, data_dir) = match &portable {
+                Some(base) => (base.join("config"), base.join("data")),
+                None => (app.path().app_config_dir()?, app.path().app_data_dir()?),
+            };
             let settings_path = config_dir.join("settings.json");
             let history_path = data_dir.join("history.json");
             let settings = settings::load(&settings_path);
@@ -71,6 +87,8 @@ pub fn run() {
             }
             tracker::spawn(app.handle().clone(), state.clone());
             app.manage(state);
+            #[cfg(feature = "portable")]
+            create_portable_window(app, portable.as_deref())?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -126,4 +144,22 @@ pub fn run() {
             }
         }
     });
+}
+
+/// A versão portátil cria a janela aqui (o tauri.portable.conf.json põe `create: false`),
+/// para o perfil do WebView2 (cache, armazenamento local) ficar na pasta portátil também.
+#[cfg(feature = "portable")]
+fn create_portable_window(app: &tauri::App, base: Option<&std::path::Path>) -> tauri::Result<()> {
+    let Some(config) = app.config().app.windows.first().cloned() else {
+        return Ok(());
+    };
+    if app.get_webview_window(&config.label).is_some() {
+        return Ok(());
+    }
+    let mut builder = tauri::WebviewWindowBuilder::from_config(app.handle(), &config)?;
+    if let Some(base) = base {
+        builder = builder.data_directory(base.join("webview"));
+    }
+    builder.build()?;
+    Ok(())
 }

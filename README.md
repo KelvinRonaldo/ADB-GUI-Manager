@@ -57,7 +57,7 @@ O caminho passado assim vale só nesta execução. A escolha salva fica em Confi
 
 | | Linux | Windows |
 |---|---|---|
-| Configurações | `~/.config/br.com.kelvinronaldo.adbguimanager/settings.json` | `%APPDATA%\br.com.kelvinronaldo.adbguimanager\settings.json` |
+| Configurações | `~/.config/br.com.kelvinronaldo.adbguimanager/settings.json` | `%APPDATA%\br.com.kelvinronaldo.adbguimanager\settings.json` (portátil: `adb-gui-manager-data\config` ao lado do .exe) |
 | Histórico e platform-tools baixado | `~/.local/share/br.com.kelvinronaldo.adbguimanager/` | `%LOCALAPPDATA%\br.com.kelvinronaldo.adbguimanager\` |
 
 ## Build
@@ -73,6 +73,24 @@ npx tauri build --bundles nsis,msi       # Windows
 ```
 
 Os pacotes saem em `src-tauri/target/release/bundle/`.
+
+## Build de Windows no Linux (cross-compiler)
+
+O `scripts/build-windows.sh` compila para Windows x86_64 (MSVC) com o `cargo-xwin` e o LLVM (clang, lld-link,
+llvm-lib, llvm-rc). O script confere as ferramentas e diz como instalar o que faltar.
+
+```bash
+scripts/build-windows.sh --portable     # .zip com o .exe, em dist-windows/
+scripts/build-windows.sh --installer    # instalador NSIS (precisa do makensis)
+```
+
+No primeiro build, o xwin baixa o CRT do MSVC e o SDK do Windows dos servidores da Microsoft, o que exige aceitar
+a licença deles (https://go.microsoft.com/fwlink/?LinkId=2086102). O script só segue com `--accept-license`. O
+download fica em `~/.cache/cargo-xwin` e é reaproveitado.
+
+A versão portátil (`--features portable` com `src-tauri/tauri.portable.conf.json`) guarda configurações, histórico,
+o platform-tools baixado e o perfil do WebView2 em `adb-gui-manager-data`, ao lado do .exe. Ela precisa do WebView2
+Runtime, que já vem no Windows 10 e 11 atualizados.
 
 ## Desenvolvimento
 
