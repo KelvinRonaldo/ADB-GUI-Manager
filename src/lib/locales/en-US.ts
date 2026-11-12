@@ -265,6 +265,8 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'err.notRoot.b': 'Production builds do not let adbd run as root.',
   'err.unknownCommand.t': 'The installed adb does not know this command',
   'err.unknownCommand.b': 'It may belong to a newer platform-tools version.',
+  'err.noLaunchActivity.t': 'This app has no screen to open',
+  'err.noLaunchActivity.b': 'I looked for a launch activity (LAUNCHER, LEANBACK_LAUNCHER and HOME) and the app declares none. It may be a service or a library without a screen.',
   'err.streamEnded.t': 'The command stopped',
   'err.streamEnded.b': 'It ended with code {code}.',
   'err.generic.t': 'The command failed',

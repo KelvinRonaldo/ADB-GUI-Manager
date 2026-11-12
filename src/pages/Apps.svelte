@@ -9,7 +9,7 @@
   import { t, type Key } from '../lib/i18n.svelte';
   import { api, copyText, onFileDrop, pickFiles, revealInFolder } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
-  import { displayCommand, shQuote } from '../lib/shellwords';
+  import { displayCommand, openAppScript, shQuote } from '../lib/shellwords';
   import { app, confirmDialog, deviceName, promptDialog, readyDevices, targetSerial, textDialog, toast } from '../lib/state.svelte';
   import { reportError, runReport } from '../lib/actions';
   import type { Package } from '../lib/types';
@@ -315,7 +315,7 @@
                     <td>{p.versionCode ?? ''}</td>
                     <td class="muted wide-only">{p.uid ?? ''}</td>
                     <td class="r acts">
-                      <button type="button" class="btn sm" onclick={() => sh(p.name, `monkey -p ${shQuote(p.name)} -c android.intent.category.LAUNCHER 1`, t('apps.opened', { pkg: p.name }))}>{t('apps.open')}</button>
+                      <button type="button" class="btn sm" onclick={() => sh(p.name, openAppScript(p.name), t('apps.opened', { pkg: p.name }))}>{t('apps.open')}</button>
                       <button type="button" class="btn sm" onclick={() => sh(p.name, `am force-stop ${shQuote(p.name)}`, t('apps.stopped', { pkg: p.name }))}>{t('apps.stop')}</button>
                       <button type="button" class="btn sm wide-only" onclick={() => clearData(p.name)}>{t('apps.clearData')}</button>
                       <Menu items={menuFor(p.name)} label={t('apps.more')} size={30} />

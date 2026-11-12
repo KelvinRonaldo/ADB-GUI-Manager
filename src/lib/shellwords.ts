@@ -58,3 +58,18 @@ export function shQuote(s: string): string {
   if (s !== '' && /^[A-Za-z0-9/._\-+=:@%,]+$/.test(s)) return s;
   return "'" + s.replace(/'/g, "'\\''") + "'";
 }
+
+/**
+ * Abre um app pelo monkey tentando as categorias de abertura em ordem: LAUNCHER (app comum),
+ * LEANBACK_LAUNCHER (TV) e HOME (app que é a tela inicial, como os builds "launcher").
+ * O monkey de Android antigo sai com 0 mesmo sem achar atividade, por isso a saída é conferida.
+ */
+export function openAppScript(pkg: string): string {
+  const q = shQuote(pkg);
+  return (
+    `for c in LAUNCHER LEANBACK_LAUNCHER HOME; do ` +
+    `o=$(monkey -p ${q} -c android.intent.category.$c 1 2>&1); ` +
+    `case "$o" in *"No activities found"*|*"monkey aborted"*) ;; *) echo "category=$c"; exit 0;; esac; ` +
+    `done; echo "ADBGUI_NO_ACTIVITY"; exit 1`
+  );
+}

@@ -77,3 +77,10 @@ describe('classify', () => {
     expect(e.actions).toEqual(['retry']);
   });
 });
+
+describe('abrir app', () => {
+  it('sem atividade de abertura vira noLaunchActivity', () => {
+    expect(classify(r('adb shell monkey -p x 1', 252, '** No activities found to run, monkey aborted.'))?.kind).toBe('noLaunchActivity');
+    expect(classify(r('adb shell "for c in ..."', 1, 'ADBGUI_NO_ACTIVITY'))?.kind).toBe('noLaunchActivity');
+  });
+});

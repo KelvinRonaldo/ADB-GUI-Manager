@@ -42,6 +42,15 @@ pub fn take_utf8(buf: &mut Vec<u8>) -> String {
     }
 }
 
+/// Últimos ~`n` bytes do texto, sem cortar um caractere ao meio (o logcat tem '←', acentos…).
+fn keep_last(s: &str, n: usize) -> String {
+    let mut start = s.len().saturating_sub(n);
+    while !s.is_char_boundary(start) {
+        start += 1;
+    }
+    s[start..].to_string()
+}
+
 async fn pump<R: AsyncRead + Unpin>(app: AppHandle, id: u64, kind: &'static str, mut r: R) -> String {
     let mut buf = [0u8; 16384];
     let mut carry = Vec::new();
@@ -55,7 +64,7 @@ async fn pump<R: AsyncRead + Unpin>(app: AppHandle, id: u64, kind: &'static str,
                 if !text.is_empty() {
                     tail.push_str(&text);
                     if tail.len() > 4096 {
-                        tail = tail[tail.len() - 2048..].to_string();
+                        tail = keep_last(&tail, 2048);
                     }
                     let _ = app.emit("stream", StreamEvent { id, kind: kind.into(), data: text, code: None });
                 }
@@ -126,7 +135,7 @@ pub fn stop(st: &AppState, id: u64) {
 
 #[cfg(test)]
 mod tests {
-    use super::take_utf8;
+    use super::{keep_last, take_utf8};
 
     #[test]
     fn utf8_split_between_chunks() {
@@ -137,5 +146,16 @@ mod tests {
         buf.extend_from_slice(&bytes[2..]);
         assert_eq!(take_utf8(&mut buf), "ção");
         assert!(buf.is_empty());
+    }
+
+    #[test]
+    fn keep_last_respects_char_boundaries() {
+        let s = format!("{}←{}", "a".repeat(10), "b".repeat(5));
+        for n in 0..s.len() + 2 {
+            let k = keep_last(&s, n);
+            assert!(s.ends_with(&k) && k.len() <= n);
+        }
+        assert_eq!(keep_last(&s, 6), "bbbbb");
+        assert_eq!(keep_last(&s, 8), "←bbbbb");
     }
 }

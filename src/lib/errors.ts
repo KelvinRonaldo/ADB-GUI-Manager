@@ -34,6 +34,7 @@ export type ErrorKind =
   | 'readOnly'
   | 'notRoot'
   | 'unknownCommand'
+  | 'noLaunchActivity'
   | 'streamEnded'
   | 'generic';
 
@@ -142,6 +143,7 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   if (/permission denied/.test(low)) return make('permissionDenied', ['retry']);
   if (/no such file or directory|does not exist/.test(low)) return make('noSuchFile', ['retry']);
   if (/unknown command|unknown option|unrecognized option/.test(low)) return make('unknownCommand', []);
+  if (/no activities found to run|monkey aborted|adbgui_no_activity/.test(low)) return make('noLaunchActivity', []);
   return make('generic', ['retry']);
 }
 

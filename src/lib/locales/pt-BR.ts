@@ -263,6 +263,8 @@ export const ptBR = {
   'err.notRoot.b': 'Builds de produção não deixam o adbd rodar como root.',
   'err.unknownCommand.t': 'O adb instalado não conhece este comando',
   'err.unknownCommand.b': 'Ele pode ser de uma versão mais nova do platform-tools.',
+  'err.noLaunchActivity.t': 'Este app não tem tela para abrir',
+  'err.noLaunchActivity.b': 'Procurei uma atividade de abertura (LAUNCHER, LEANBACK_LAUNCHER e HOME) e o app não declara nenhuma. Pode ser um serviço ou biblioteca sem tela.',
   'err.streamEnded.t': 'O comando parou',
   'err.streamEnded.b': 'Terminou com código {code}.',
   'err.generic.t': 'O comando falhou',

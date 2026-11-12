@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayCommand, shQuote, splitArgs, stripAdb } from './shellwords';
+import { displayCommand, openAppScript, shQuote, splitArgs, stripAdb } from './shellwords';
 
 describe('splitArgs', () => {
   it('separa por espaço e respeita aspas', () => {
@@ -34,5 +34,14 @@ describe('quoting', () => {
   it('protege caminhos do aparelho', () => {
     expect(shQuote('/sdcard/Download')).toBe('/sdcard/Download');
     expect(shQuote("/sdcard/it's.txt")).toBe("'/sdcard/it'\\''s.txt'");
+  });
+});
+
+describe('openAppScript', () => {
+  it('tenta LAUNCHER, LEANBACK_LAUNCHER e HOME, nessa ordem', () => {
+    const s = openAppScript('br.com.exemplo');
+    expect(s).toContain('for c in LAUNCHER LEANBACK_LAUNCHER HOME');
+    expect(s).toContain('monkey -p br.com.exemplo -c android.intent.category.$c 1');
+    expect(s).toContain('ADBGUI_NO_ACTIVITY');
   });
 });
