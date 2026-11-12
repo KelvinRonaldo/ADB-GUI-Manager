@@ -137,6 +137,8 @@ export interface Favorite {
 }
 
 export type Theme = 'system' | 'light' | 'dark';
+/** Como a lista de aparelhos aparece: cartões, linhas com os mesmos dados ou só o essencial. */
+export type DevicesView = 'grid' | 'list' | 'compact';
 export type Lang = 'pt-BR' | 'en-US';
 
 export interface Settings {
@@ -164,6 +166,7 @@ export interface Settings {
   wifiPort: number;
   /** Seriais que o usuário pediu para não passar sozinhos. */
   usbToWifiSkip: string[];
+  devicesView: DevicesView;
 }
 
 export interface InitInfo {

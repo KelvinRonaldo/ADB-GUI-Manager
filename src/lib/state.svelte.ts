@@ -36,6 +36,7 @@ export const DEFAULT_SETTINGS: Settings = {
   usbToWifi: 'auto',
   wifiPort: 5555,
   usbToWifiSkip: [],
+  devicesView: 'grid',
 };
 
 export interface Toast {
@@ -454,7 +455,11 @@ function tick(): void {
   const every = Math.max(10, app.settings.summaryRefreshSec || 60) * 1000;
   if (app.autoRefresh && clock.now - lastSummaryRefresh >= every) {
     lastSummaryRefresh = clock.now;
-    for (const d of readyDevices()) refreshSummary(d.serial);
+    // A lista simplificada não mostra bateria, IP nem armazenamento: só o alvo segue atualizado.
+    const compact = app.settings.devicesView === 'compact';
+    for (const d of readyDevices()) {
+      if (!compact || d.serial === app.settings.targetSerial) refreshSummary(d.serial);
+    }
   }
 }
 

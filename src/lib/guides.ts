@@ -21,7 +21,7 @@ const steps = (page: string, targets: string[]): GuideStep[] =>
   targets.map((target, i) => ({ target, key: `g.${page}.${i + 1}` }));
 
 export const PAGE_GUIDES: Record<Page, GuideStep[]> = {
-  devices: steps('devices', ['devices-filters', 'devices-card', 'devices-card-actions', 'devices-connect']),
+  devices: steps('devices', ['devices-filters', 'devices-view', 'devices-card', 'devices-card-actions', 'devices-connect']),
   details: steps('details', ['details-actions', 'details-tabs', 'details-verbose']),
   connect: steps('connect', ['connect-usb', 'connect-wifi', 'connect-mdns', 'connect-recent']),
   apps: steps('apps', ['apps-search', 'apps-table', 'apps-drop', 'apps-params']),

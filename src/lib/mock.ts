@@ -23,6 +23,14 @@ let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
   { serial: '192.168.0.42:5555', state: 'device', stateKind: 'device', connection: 'wifi', product: 'P2', model: 'P2', device: 'P2', transportId: '5' },
   { serial: 'R5CT90XYZ', state: 'unauthorized', stateKind: 'unauthorized', connection: 'usb', usb: '1-5', transportId: '7' },
+  // ?many: outros estados, para ver as três visualizações da lista.
+  ...(params.has('many')
+    ? ([
+        { serial: 'DX8K0042', state: 'recovery', stateKind: 'recovery', connection: 'usb', usb: '1-7', product: 'DX8000', model: 'DX8000', transportId: '8' },
+        { serial: '192.168.0.90:5555', state: 'offline', stateKind: 'offline', connection: 'wifi', transportId: '9' },
+        { serial: 'emulator-5554', state: 'device', stateKind: 'device', connection: 'emulator', product: 'sdk_gphone64', model: 'sdk_gphone64_x86_64', transportId: '10' },
+      ] as Device[])
+    : []),
 ];
 
 // Para testar o fluxo USB → Wi-Fi no navegador: __mockPlugUsb() liga um aparelho USB novo.
