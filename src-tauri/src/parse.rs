@@ -210,16 +210,49 @@ pub fn parse_battery(text: &str) -> Battery {
     }
 }
 
-/// Primeiro `inet a.b.c.d/nn` de `ip -f inet addr show <iface>`.
-pub fn parse_inet(text: &str) -> Option<String> {
+/// Todos os IPv4 de `ip -f inet addr show`, como (interface, ip).
+pub fn parse_inet_all(text: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let mut iface = String::new();
     for line in text.lines() {
+        // Cabeçalho: "33: wlan0: <BROADCAST,...>" ou "5: rmnet_data0@if3: <...>".
+        if let Some((num, rest)) = line.split_once(": ") {
+            if !num.is_empty() && num.trim().chars().all(|c| c.is_ascii_digit()) {
+                iface = rest.split(':').next().unwrap_or("").split('@').next().unwrap_or("").trim().to_string();
+                continue;
+            }
+        }
         let t = line.trim();
         if let Some(rest) = t.strip_prefix("inet ") {
-            let addr = rest.split_whitespace().next()?;
-            return Some(addr.split('/').next()?.to_string());
+            if let Some(addr) = rest.split_whitespace().next().and_then(|a| a.split('/').next()) {
+                out.push((iface.clone(), addr.to_string()));
+            }
         }
     }
-    None
+    out
+}
+
+/// O IP que serve para `adb connect`: Wi-Fi primeiro (wlan, mlan, wifi), depois cabo
+/// (eth); nunca loopback, dados móveis, VPN ou interfaces virtuais.
+pub fn pick_wifi_ip(text: &str) -> Option<String> {
+    let all = parse_inet_all(text);
+    let usable = |i: &str, ip: &str| {
+        !ip.starts_with("127.")
+            && !["lo", "rmnet", "ccmni", "dummy", "tun", "p2p", "rndis", "usb", "docker", "v4-"].iter().any(|p| i.starts_with(p))
+    };
+    let rank = |i: &str| {
+        if i.starts_with("wlan") || i.starts_with("mlan") || i.starts_with("wifi") {
+            0
+        } else if i.starts_with("eth") {
+            1
+        } else {
+            2
+        }
+    };
+    all.iter()
+        .filter(|(i, ip)| usable(i, ip))
+        .min_by_key(|(i, _)| rank(i))
+        .map(|(_, ip)| ip.clone())
 }
 
 #[derive(Debug, Clone, Serialize, Default, PartialEq)]
@@ -546,8 +579,8 @@ emulator-5554          offline transport_id:9\n\n";
     #[test]
     fn inet_and_df() {
         let ip = "33: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500\n    inet 192.168.207.86/24 brd 192.168.207.255 scope global wlan0\n";
-        assert_eq!(parse_inet(ip).as_deref(), Some("192.168.207.86"));
-        assert_eq!(parse_inet("Device \"wlan0\" does not exist."), None);
+        assert_eq!(pick_wifi_ip(ip).as_deref(), Some("192.168.207.86"));
+        assert_eq!(pick_wifi_ip("Device \"wlan0\" does not exist."), None);
         let df = "Filesystem      1K-blocks    Used Available Use% Mounted on\n/dev/block/dm-9   4978656 1678772   3290608  34% /data/user/0\n";
         assert_eq!(parse_df(df), Some(Storage { total_kb: 4978656, used_kb: 1678772, avail_kb: 3290608 }));
         // Android 5.1 (GPOS700): toolbox com unidades.
@@ -555,6 +588,20 @@ emulator-5554          offline transport_id:9\n\n";
         let s = parse_df(old).unwrap();
         assert_eq!(s.total_kb, (5.1f64 * 1024.0 * 1024.0).round() as u64);
         assert_eq!(s.used_kb, (625.3f64 * 1024.0).round() as u64);
+    }
+
+    #[test]
+    fn inet_all_and_pick() {
+        let out = "1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536\n    inet 127.0.0.1/8 scope host lo\n\
+5: rmnet_data0@if3: <UP> mtu 1500\n    inet 10.55.1.2/30 scope global rmnet_data0\n\
+8: mlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500\n    inet 192.168.1.50/24 brd 192.168.1.255 scope global mlan0\n";
+        assert_eq!(parse_inet_all(out).len(), 3);
+        assert_eq!(pick_wifi_ip(out).as_deref(), Some("192.168.1.50"));
+        let eth_only = "2: eth0: <UP>\n    inet 10.0.0.9/24 scope global eth0\n";
+        assert_eq!(pick_wifi_ip(eth_only).as_deref(), Some("10.0.0.9"));
+        assert_eq!(pick_wifi_ip("1: lo: <UP>\n    inet 127.0.0.1/8 scope host lo\n"), None);
+        let real = "33: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc mq state UP group default qlen 3000\n    inet 192.168.207.86/24 brd 192.168.207.255 scope global wlan0\n       valid_lft forever preferred_lft forever\n";
+        assert_eq!(pick_wifi_ip(real).as_deref(), Some("192.168.207.86"));
     }
 
     #[test]

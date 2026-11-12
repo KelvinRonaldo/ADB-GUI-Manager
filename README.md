@@ -12,7 +12,7 @@ parâmetros de cada comando, e mostra o comando exato de cada ação no registro
 | Primeira execução | Procura o adb (PATH, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, SDK padrão). Sem adb, deixa apontar o executável ou baixar o platform-tools oficial do Google, com confirmação. |
 | Aparelhos | Lista ao vivo (`adb track-devices -l`) em cartões: Android, bateria, IP do Wi-Fi, armazenamento. Menu com reiniciar, passar para Wi-Fi, captura e gravação de tela, bugreport, root e remount. |
 | Detalhes | Resumo, propriedades, bateria, rede, armazenamento, tela e processos, com a saída verbosa filtrável e exportável. |
-| Conectar | Espera por USB, pareamento por código ou QR code (Android 11+), USB para Wi-Fi (`tcpip`), conexão por IP, descoberta mDNS e conexões recentes. |
+| Conectar | Espera por USB, pareamento por código ou QR code (Android 11+), USB para Wi-Fi guiado, conexão por IP, descoberta mDNS e conexões recentes. |
 | Apps | Pacotes com abrir, parar, limpar dados, desinstalar, extrair APK, permissões, desativar e informações. Instalação arrastando APKs, com todos os parâmetros do `install`. |
 | Arquivos | Computador e aparelho lado a lado, `push` e `pull` com progresso real, `--sync`, `-n`, `-a`, `-z`. |
 | Shell | `adb shell` em terminal de verdade (PTY), várias abas, comandos salvos, rodar em todos os aparelhos. |
@@ -27,6 +27,21 @@ Na primeira abertura há um tour curto. No fim, o app pergunta se você quer o g
 vez que ela abrir. F1 abre o guia da página atual.
 
 Idiomas: pt-BR e en-US. Tema: Sistema, Claro ou Escuro.
+
+## Aparelho novo por USB passa para o Wi-Fi
+
+Alguns terminais, pela versão do Android, não ficam conectados por USB. Por isso, quando um aparelho é ligado por
+USB com o app aberto, o app faz sozinho a sequência:
+
+1. Lê o IP do aparelho na rede (`adb shell ip -f inet addr show`, preferindo Wi-Fi e depois cabo).
+2. Roda `adb tcpip 5555`.
+3. Pede para tirar o cabo USB e espera ele sair (dá para continuar sem tirar).
+4. Roda `adb connect IP:5555`, com até seis tentativas, e confirma que o aparelho apareceu pronto na lista.
+5. Diz se funcionou. Se falhar, mostra o motivo, com tentar de novo e começar de novo.
+
+Em Configurações › Aparelho novo por USB: passar sozinho (padrão), perguntar ou não fazer nada; a porta TCP; e se
+pede para tirar o cabo. Os aparelhos que já estavam ligados quando o app abriu não mudam. O "Passar para Wi-Fi" do
+cartão, dos detalhes e da tela Conectar usa o mesmo fluxo.
 
 ## Como abrir com outro adb
 
@@ -69,7 +84,8 @@ cd src-tauri && cargo test   # testes do backend
 
 No navegador, a interface usa `src/lib/mock.ts` no lugar do Rust. Parâmetros de URL úteis:
 `?tour` (tour da primeira abertura), `?guides` (oferta de guia nas páginas), `?noadb` (sem adb encontrado),
-`?fresh` (sem configurações salvas).
+`?fresh` (sem configurações salvas). No console, `__mockPlugUsb()` simula um aparelho USB novo para testar o
+fluxo USB → Wi-Fi, e `__mockPlugUsb(true)` simula o `connect` recusado.
 
 ## Estrutura
 
@@ -82,6 +98,7 @@ src/                     interface (Svelte 5 + TypeScript)
   lib/errors.ts          classificação das falhas do adb em causa e ação
   lib/locales/           textos pt-BR e en-US (mesmas chaves, checado no build e nos testes)
   lib/state.svelte.ts    estado global, aparelhos, reconexão, guias
+  lib/wififlow.svelte.ts fluxo USB → Wi-Fi (IP, tcpip, tirar o cabo, connect)
 src-tauri/src/           backend (Rust)
   locate.rs              onde está o adb e validação por `adb version`
   runner.rs              execução de comandos e registro

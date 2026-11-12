@@ -3,16 +3,13 @@ import { api, copyText, pickSavePath, revealInFolder } from './ipc';
 import { t } from './i18n.svelte';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { tcpAddress } from './format';
+import { startWifiFlow } from './wififlow.svelte';
 import {
-  addRecent,
-  app,
   confirmDialog,
-  connectAddress,
   deviceName,
   navigate,
   promptDialog,
   reconnect,
-  refreshSummary,
   showError,
   toast,
 } from './state.svelte';
@@ -93,28 +90,9 @@ export async function remount(serial: string): Promise<void> {
   await runReport(['remount'], serial, t('act.done', { cmd: 'adb remount' }));
 }
 
-export async function toWifi(serial: string): Promise<void> {
-  let ip = app.summaries[serial]?.wifiIp;
-  if (!ip) {
-    await refreshSummary(serial, false);
-    ip = app.summaries[serial]?.wifiIp;
-  }
-  if (!ip) {
-    toast(t('act.toWifiNoIp'), 'error');
-    return;
-  }
-  const name = deviceName(serial);
-  const r = await runReport(['tcpip', '5555'], serial, t('act.done', { cmd: 'adb tcpip 5555' }));
-  if (!r) return;
-  await new Promise((res) => setTimeout(res, 2000));
-  const address = `${ip}:5555`;
-  const { ok, error } = await connectAddress(address);
-  if (ok) {
-    addRecent(address, name);
-    toast(t('act.toWifiDone', { address }), 'success');
-  } else if (error) {
-    reportError(error, null, () => toWifi(serial));
-  }
+/** Mesmo fluxo guiado do aparelho USB novo: IP, tcpip, tirar o cabo, connect. */
+export function toWifi(serial: string): void {
+  startWifiFlow(serial);
 }
 
 export async function screenshot(serial: string): Promise<void> {

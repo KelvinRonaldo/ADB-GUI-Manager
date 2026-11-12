@@ -159,6 +159,12 @@ export interface Settings {
   savedCommands: SavedCommand[];
   favorites: Favorite[];
   targetSerial: string;
+  /** Aparelho ligado por USB com o app aberto: passa para Wi-Fi sozinho, pergunta ou nada. */
+  usbToWifi: 'auto' | 'ask' | 'off';
+  wifiPort: number;
+  askUnplug: boolean;
+  /** Seriais que o usuário pediu para não passar sozinhos. */
+  usbToWifiSkip: string[];
 }
 
 export interface InitInfo {

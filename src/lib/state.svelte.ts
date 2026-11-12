@@ -4,6 +4,7 @@ import { friendlyName, tcpAddress } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
 import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, Settings, Summary } from './types';
+import { isFlowSerial, onUsbReady } from './wififlow.svelte';
 
 export const DEFAULT_SETTINGS: Settings = {
   adbMode: 'auto',
@@ -32,6 +33,10 @@ export const DEFAULT_SETTINGS: Settings = {
   ],
   favorites: [],
   targetSerial: '',
+  usbToWifi: 'auto',
+  wifiPort: 5555,
+  askUnplug: true,
+  usbToWifiSkip: [],
 };
 
 export interface Toast {
@@ -279,9 +284,13 @@ function onDevices(list: Device[]): void {
     if (d.stateKind === 'device' && (!prev || prev.stateKind !== 'device' || !app.summaries[d.serial])) {
       refreshSummary(d.serial);
     }
+    const becameReady = d.stateKind === 'device' && (!prev || prev.stateKind !== 'device');
     if (app.lost[d.serial] && d.stateKind === 'device') {
       delete app.lost[d.serial];
       toast(t('act.reconnected', { name: deviceName(d.serial) }), 'success');
+    } else if (!initial && becameReady && d.connection === 'usb' && app.settings.usbToWifi !== 'off' && !app.settings.usbToWifiSkip.includes(d.serial)) {
+      // USB novo com o app aberto: o resumo chega antes do nome, então espera um pouco.
+      setTimeout(() => onUsbReady(d.serial), 1200);
     } else if (!initial && !prev && d.stateKind === 'device') {
       toast(t('act.deviceArrived', { name: friendlyName(d) }), 'info');
     }
@@ -290,7 +299,7 @@ function onDevices(list: Device[]): void {
   // Um aparelho pronto que sumiu: Wi-Fi tenta voltar sozinho; USB só avisa.
   if (!initial && app.serverRunning) {
     for (const [serial, prev] of before) {
-      if (now.has(serial) || prev.stateKind !== 'device') continue;
+      if (now.has(serial) || prev.stateKind !== 'device' || isFlowSerial(serial)) continue;
       const name = friendlyName(prev, app.summaries[serial]);
       if (tcpAddress(serial)) {
         app.lost[serial] = { serial, name, attempts: 0, nextAt: Date.now() + RETRY_EVERY_MS, gaveUp: false, busy: false };

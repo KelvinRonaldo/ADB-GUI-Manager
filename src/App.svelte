@@ -5,6 +5,7 @@
   import Toasts from './components/Toasts.svelte';
   import ModalHost from './components/ModalHost.svelte';
   import Guide from './components/Guide.svelte';
+  import WifiWizard from './components/WifiWizard.svelte';
   import FirstRun from './pages/FirstRun.svelte';
   import Devices from './pages/Devices.svelte';
   import Details from './pages/Details.svelte';
@@ -85,6 +86,7 @@
 <Toasts />
 <ModalHost />
 <Guide />
+<WifiWizard />
 
 <style>
   .shell {

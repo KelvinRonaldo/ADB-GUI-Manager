@@ -19,11 +19,24 @@ let adbOk = !params.has('noadb');
 let nextId = 1;
 let settings: Record<string, unknown> = params.has('fresh') ? {} : { tourDone: !params.has('tour'), pageGuides: params.has('guides') ? 'ask' : 'never' };
 
-const DEVICES: Device[] = [
+let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
   { serial: '192.168.0.42:5555', state: 'device', stateKind: 'device', connection: 'wifi', product: 'P2', model: 'P2', device: 'P2', transportId: '5' },
   { serial: 'R5CT90XYZ', state: 'unauthorized', stateKind: 'unauthorized', connection: 'usb', usb: '1-5', transportId: '7' },
 ];
+
+// Para testar o fluxo USB → Wi-Fi no navegador: __mockPlugUsb() liga um aparelho USB novo.
+// Depois do tcpip, o "cabo sai" sozinho em 4 s; o connect põe o aparelho Wi-Fi na lista.
+const NEW_USB: Device = { serial: 'NEWUSB01', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-6', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '11' };
+const NEW_IP = '192.168.0.77';
+let failConnect = false;
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__mockPlugUsb = (fail = false) => {
+    failConnect = fail;
+    DEVICES = [...DEVICES.filter((d) => d.serial !== NEW_USB.serial && d.serial !== `${NEW_IP}:5555`), NEW_USB];
+    emit('devices', DEVICES);
+  };
+}
 
 const PROPS: Record<string, Record<string, string>> = {
   '7A1B2C3D': {
@@ -139,7 +152,25 @@ function output(rest: string[], serial: string | null): { code: number; stdout: 
     return { code: 0, stdout: 'List of devices attached\n' + DEVICES.map((d) => `${d.serial}\t${d.state}`).join('\n') + '\n', stderr: '' };
   if (rest[0] === 'help') return { code: 0, stdout: HELP, stderr: '' };
   if (rest[0] === 'version') return { code: 0, stdout: 'Android Debug Bridge version 1.0.41\nVersion 35.0.2\nInstalled as /usr/bin/adb\n', stderr: '' };
-  if (rest[0] === 'connect') return { code: 0, stdout: `connected to ${rest[1]}\n`, stderr: '' };
+  if (rest[0] === 'connect') {
+    if (rest[1] === `${NEW_IP}:5555`) {
+      if (failConnect) return { code: 0, stdout: `failed to connect to ${rest[1]}: Connection refused\n`, stderr: '' };
+      setTimeout(() => {
+        DEVICES = [...DEVICES.filter((d) => d.serial !== rest[1]), { ...NEW_USB, serial: rest[1], connection: 'wifi', usb: null, transportId: '12' }];
+        emit('devices', DEVICES);
+      }, 300);
+    }
+    return { code: 0, stdout: `connected to ${rest[1]}\n`, stderr: '' };
+  }
+  if (rest[0] === 'tcpip') {
+    if (serial === NEW_USB.serial) {
+      setTimeout(() => {
+        DEVICES = DEVICES.filter((d) => d.serial !== NEW_USB.serial);
+        emit('devices', DEVICES);
+      }, 4000);
+    }
+    return { code: 0, stdout: `restarting in TCP mode port: ${rest[1]}\n`, stderr: '' };
+  }
   if (rest[0] === 'disconnect') return { code: 0, stdout: `disconnected ${rest[1] ?? 'everything'}\n`, stderr: '' };
   if (rest[0] === 'pair') return { code: 0, stdout: `Successfully paired to ${rest[1]} [guid=adb-XYZ]\n`, stderr: '' };
   if (rest[0] === 'mdns') return { code: 0, stdout: 'List of discovered mdns services\n', stderr: '' };
@@ -417,6 +448,15 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       return null;
     case 'devices_current':
       return adbOk ? DEVICES : [];
+    case 'device_wifi_ip': {
+      const id = nextId++;
+      const c = `adb -s ${a.serial} shell "ip -f inet addr show"`;
+      log(id, c, 'running');
+      await wait(250);
+      log(id, c, 'done', 0, 250);
+      const ip = a.serial === NEW_USB.serial ? NEW_IP : a.serial === '7A1B2C3D' ? '192.168.0.57' : '192.168.0.42';
+      return { ip, result: { id, cmd: c, code: 0, stdout: '', stderr: '', durationMs: 250, timedOut: false } };
+    }
   }
   throw new Error(`mock: comando desconhecido ${cmd}`);
 }

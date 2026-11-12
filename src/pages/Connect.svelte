@@ -9,8 +9,9 @@
   import { api, listen } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
   import { formatDate } from '../lib/format';
-  import { addRecent, app, connectAddress, deviceName, readyDevices, refreshSummary, restartServer, saveSettings, toast } from '../lib/state.svelte';
+  import { addRecent, app, connectAddress, deviceName, readyDevices, restartServer, saveSettings, toast } from '../lib/state.svelte';
   import { runReport } from '../lib/actions';
+  import { startWifiFlow } from '../lib/wififlow.svelte';
   import type { MdnsService, StreamEvent } from '../lib/types';
 
   type WTab = 'pair' | 'usb' | 'ip';
@@ -29,7 +30,7 @@
   let wifiError = $state<AdbError | null>(null);
   let lastAction: (() => void) | null = null;
   let usbSerial = $state('');
-  let usbPort = $state('5555');
+  let usbPort = $state(String(app.settings.wifiPort || 5555));
   let ipAddress = $state('');
 
   // QR
@@ -148,30 +149,8 @@
     }
   }
 
-  async function doUsbToWifi() {
-    wifiError = null;
-    const serial = usbSerial;
-    if (!serial) return;
-    busy = true;
-    try {
-      let ip = app.summaries[serial]?.wifiIp;
-      if (!ip) {
-        await refreshSummary(serial, false);
-        ip = app.summaries[serial]?.wifiIp;
-      }
-      if (!ip) {
-        toast(t('act.toWifiNoIp'), 'error');
-        return;
-      }
-      const port = usbPort.trim() || '5555';
-      const r = await api.run(['tcpip', port], { serial, timeoutMs: 20000 });
-      const err = classify(r);
-      if (err) return fail(err, doUsbToWifi);
-      await new Promise((res) => setTimeout(res, 2000));
-      await finishConnect(`${ip}:${port}`, deviceName(serial));
-    } finally {
-      busy = false;
-    }
+  function doUsbToWifi() {
+    if (usbSerial) startWifiFlow(usbSerial, { port: parseInt(usbPort, 10) || app.settings.wifiPort || 5555 });
   }
 
   async function doIp(address = ipAddress.trim()) {
@@ -287,7 +266,7 @@
                 <label class="field">{t('connect.port')}<input class="input mono" inputmode="numeric" bind:value={usbPort} /></label>
               </div>
               <button type="button" class="btn primary" disabled={busy || !usbSerial} onclick={doUsbToWifi}>{t('connect.usbButton')}</button>
-              <div class="mono muted small">adb -s {usbSerial} tcpip {usbPort} → adb connect {app.summaries[usbSerial]?.wifiIp ?? 'IP'}:{usbPort}</div>
+              <div class="mono muted small">adb -s {usbSerial} tcpip {usbPort} → {t('wifi.step.unplug').toLowerCase()} → adb connect {app.summaries[usbSerial]?.wifiIp ?? 'IP'}:{usbPort}</div>
             {:else}
               <div class="muted">{t('connect.noUsb')}</div>
             {/if}

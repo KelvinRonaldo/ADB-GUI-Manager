@@ -72,6 +72,7 @@ export const api = {
   serverStop: () => invoke<RunResult>('server_stop'),
   historyClear: () => invoke<void>('history_clear'),
   devicesCurrent: () => invoke<Device[]>('devices_current'),
+  wifiIp: (serial: string) => invoke<{ ip: string | null; result: RunResult }>('device_wifi_ip', { serial }),
 };
 
 export async function pickFiles(opts: { multiple?: boolean; directory?: boolean; filters?: { name: string; extensions: string[] }[]; title?: string } = {}): Promise<string[]> {

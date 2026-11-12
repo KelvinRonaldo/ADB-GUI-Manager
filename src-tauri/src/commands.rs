@@ -158,7 +158,7 @@ pub struct Summary {
 #[tauri::command]
 pub async fn device_summary(app: AppHandle, st: St<'_>, serial: String, quiet: Option<bool>) -> Result<Summary, String> {
     let script = format!(
-        "getprop; echo {s}; dumpsys battery; echo {s}; ip -f inet addr show wlan0; echo {s}; df /data",
+        "getprop; echo {s}; dumpsys battery; echo {s}; ip -f inet addr show; echo {s}; df /data",
         s = parse::SECTION
     );
     let r = runner::run(
@@ -177,7 +177,7 @@ pub async fn device_summary(app: AppHandle, st: St<'_>, serial: String, quiet: O
     Ok(Summary {
         serial,
         battery: parse::parse_battery(get(1)),
-        wifi_ip: parse::parse_inet(get(2)),
+        wifi_ip: parse::pick_wifi_ip(get(2)),
         storage: parse::parse_df(get(3)),
         props,
         raw: r.stdout.clone(),
@@ -287,4 +287,24 @@ pub fn history_clear(st: St<'_>) {
 #[tauri::command]
 pub fn devices_current(st: St<'_>) -> Vec<parse::Device> {
     st.devices.lock().map(|d| d.clone()).unwrap_or_default()
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WifiIp {
+    pub ip: Option<String>,
+    pub result: RunResult,
+}
+
+/// IP do aparelho na rede, para o `adb connect` depois do `tcpip`.
+#[tauri::command]
+pub async fn device_wifi_ip(app: AppHandle, st: St<'_>, serial: String) -> Result<WifiIp, String> {
+    let r = runner::run(
+        &app,
+        &st,
+        vec!["shell".into(), "ip -f inet addr show".into()],
+        RunOpts { serial: Some(serial), timeout_ms: Some(15_000), quiet: false },
+    )
+    .await?;
+    Ok(WifiIp { ip: parse::pick_wifi_ip(&r.stdout), result: r })
 }

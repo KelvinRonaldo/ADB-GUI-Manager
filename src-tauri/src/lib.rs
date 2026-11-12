@@ -100,6 +100,7 @@ pub fn run() {
             commands::server_stop,
             commands::history_clear,
             commands::devices_current,
+            commands::device_wifi_ip,
         ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o ADB GUI Manager");

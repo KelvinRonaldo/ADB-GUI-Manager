@@ -201,6 +201,41 @@
         <label class="check"><input type="checkbox" bind:checked={app.settings.stopServerOnExit} onchange={saveSettings} /> {t('settings.stopOnExit')}</label>
       </section>
 
+      <section class="card sec">
+        <h2>{t('settings.usbWifi')}</h2>
+        <div class="seg" role="group" aria-label={t('settings.usbWifi')}>
+          {#each ['auto', 'ask', 'off'] as const as m (m)}
+            <button
+              type="button"
+              aria-pressed={app.settings.usbToWifi === m}
+              onclick={() => {
+                app.settings.usbToWifi = m;
+                saveSettings();
+              }}>{t(`settings.usbWifi.${m}`)}</button
+            >
+          {/each}
+        </div>
+        <div class="muted small">{t('settings.usbWifiHint')}</div>
+        <label class="check"
+          >{t('settings.wifiPort')}
+          <input class="input tiny" type="number" min="1" max="65535" bind:value={app.settings.wifiPort} onchange={saveSettings} /></label
+        >
+        <label class="check"><input type="checkbox" bind:checked={app.settings.askUnplug} onchange={saveSettings} /> {t('settings.askUnplug')}</label>
+        {#if app.settings.usbToWifiSkip.length}
+          <div class="row">
+            <span class="muted small">{t('settings.skipList', { n: app.settings.usbToWifiSkip.length })}</span>
+            <button
+              type="button"
+              class="btn sm"
+              onclick={() => {
+                app.settings.usbToWifiSkip = [];
+                saveSettings();
+              }}>{t('settings.skipClear')}</button
+            >
+          </div>
+        {/if}
+      </section>
+
       <section class="card sec" data-guide="settings-env">
         <h2>{t('settings.env')}</h2>
         {#each envNames as name (name)}
