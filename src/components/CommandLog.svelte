@@ -57,6 +57,8 @@
             <span class="code run"><Icon name="spinner" size={12} class="spin" /> {t('log.running')}</span>
           {:else if e.code === 0}
             <span class="code ok">✓ 0</span>
+          {:else if e.code === 130 && !e.error}
+            <span class="code stopped">■ {t('log.stopped')}</span>
           {:else}
             <span class="code bad" title={e.error ?? ''}>✗ {e.code}{e.error ? ` ${e.error}` : ''}</span>
           {/if}
@@ -138,6 +140,7 @@
     color: var(--accent);
   }
   .code {
+    flex: 0 0 auto;
     font-weight: 500;
     max-width: 360px;
     overflow: hidden;
@@ -157,6 +160,9 @@
   }
   .code.run {
     color: var(--accent);
+  }
+  .code.stopped {
+    color: var(--muted);
   }
   .ms {
     color: var(--muted);

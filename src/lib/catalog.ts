@@ -530,7 +530,8 @@ export function buildArgs(_def: CommandDef, variant: Variant, values: Values): B
 export function helpCommands(help: string): Set<string> {
   const found = new Set<string>();
   for (const def of CATALOG) {
-    const re = new RegExp(`^\\s+${def.name.replace(/[-]/g, '\\-')}(\\b|\\[|$)`, 'm');
+    // Comandos têm recuo de 1 ou 2 espaços; as linhas de descrição, mais.
+    const re = new RegExp(`^ {1,2}${def.name.replace(/[-]/g, '\\-')}(\\s|\\[|$)`, 'm');
     if (re.test(help)) found.add(def.name);
   }
   return found;
@@ -539,7 +540,7 @@ export function helpCommands(help: string): Set<string> {
 /** O trecho do `adb help` sobre um comando: a linha dele e as que vêm mais recuadas. */
 export function helpExcerpt(help: string, name: string): string {
   const lines = help.split(/\r?\n/);
-  const re = new RegExp(`^(\\s+)${name.replace(/[-]/g, '\\-')}(\\b|\\[|$)`);
+  const re = new RegExp(`^( {1,2})${name.replace(/[-]/g, '\\-')}(\\s|\\[|$)`);
   const out: string[] = [];
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(re);

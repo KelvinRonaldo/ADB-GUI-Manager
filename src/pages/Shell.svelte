@@ -28,6 +28,15 @@
   let optNoErr = $state(false);
   let optSu = $state(false);
   let skey = 1;
+  // Em tela estreita (escala alta), o painel de comandos salvos começa recolhido
+  // para o terminal ter mais colunas.
+  let showSaved = $state(true);
+  let cols: HTMLElement | undefined = $state();
+
+  function toggleSaved() {
+    showSaved = !showSaved;
+    requestAnimationFrame(fitCurrent);
+  }
 
   const serial = $derived(targetSerial());
 
@@ -69,6 +78,14 @@
         const id = await api.ptyOpen(args, session.serial, term.cols, term.rows);
         const s = sessions.find((x) => x.key === session.key);
         if (s) s.pty = id;
+        // O tamanho pode ter mudado enquanto a sessão abria; o shell do aparelho
+        // precisa do valor final, senão rola a linha para o lado.
+        try {
+          fit.fit();
+        } catch {
+          /* oculto */
+        }
+        api.ptyResize(id, term.cols, term.rows).catch(() => undefined);
         if (optSu) setTimeout(() => api.ptyWrite(id, 'su\r'), 400);
       } catch (e) {
         term.writeln(`\x1b[31m${String(e)}\x1b[0m`);
@@ -115,6 +132,8 @@
     } catch {
       /* oculto */
     }
+    const s = sessions.find((y) => y.key === current);
+    if (x && s?.pty != null && s.ended == null) api.ptyResize(s.pty, x.term.cols, x.term.rows).catch(() => undefined);
     x?.term.focus();
   }
 
@@ -126,6 +145,7 @@
   let offData: (() => void) | undefined;
   let offExit: (() => void) | undefined;
   onMount(async () => {
+    if (cols && cols.clientWidth < 900) showSaved = false;
     offData = await listen<{ id: number; data: string }>('pty', (e) => {
       const s = sessions.find((x) => x.pty === e.id);
       if (s) terms.get(s.key)?.term.write(e.data);
@@ -190,7 +210,7 @@
   <TopBar heading={t('shell.title')} sub={t('shell.subtitle')} />
   <div class="page-body">
     <PageGuideOffer page="shell" />
-    <div class="cols">
+    <div class="cols" bind:this={cols}>
       <section class="termbox" aria-label={t('shell.title')}>
         <div class="tabs" role="tablist" aria-label={t('shell.tabs')} data-guide="shell-tabs">
           {#each sessions as s (s.key)}
@@ -206,6 +226,10 @@
           <label class="opt"><input type="checkbox" bind:checked={optPty} /> <code>-t</code> {t('shell.optPty')}</label>
           <label class="opt"><input type="checkbox" bind:checked={optNoErr} /> <code>-x</code> {t('shell.optNoErr')}</label>
           <label class="opt"><input type="checkbox" bind:checked={optSu} /> {t('shell.optSu')}</label>
+          <button type="button" class="savedtoggle" data-guide="shell-saved-toggle" aria-pressed={showSaved} title={t('shell.saved')} onclick={toggleSaved}>
+            <Icon name="star" size={14} />
+            <span>{t('shell.saved')}</span>
+          </button>
         </div>
         <div class="screens" data-guide="shell-term">
           {#each sessions as s (s.key)}
@@ -228,7 +252,8 @@
         </div>
       </section>
 
-      <aside class="card saved" aria-label={t('shell.saved')} data-guide="shell-saved">
+      {#if showSaved}
+      <aside class="card saved" aria-label={t('shell.saved')}>
         <div class="row">
           <h2>{t('shell.saved')}</h2>
           <div class="spacer"></div>
@@ -245,6 +270,7 @@
         {/each}
         <div class="muted small">{t('shell.savedHint')}</div>
       </aside>
+      {/if}
     </div>
   </div>
 </div>
@@ -359,8 +385,25 @@
     color: #9aa1ad;
     font-size: 12px;
   }
+  .savedtoggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #3a4150;
+    border-radius: 6px;
+    background: transparent;
+    color: #c3c8d0;
+    font-size: 12px;
+    padding: 4px 8px;
+    margin: 0 4px 4px 6px;
+    cursor: pointer;
+  }
+  .savedtoggle[aria-pressed='true'] {
+    background: #23272f;
+    color: #fff;
+  }
   .saved {
-    flex: 0 0 280px;
+    flex: 0 0 260px;
     padding: 14px;
     display: flex;
     flex-direction: column;

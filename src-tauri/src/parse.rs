@@ -230,13 +230,29 @@ pub struct Storage {
     pub avail_kb: u64,
 }
 
-/// `df <caminho>` em blocos de 1K: a segunda linha tem total, usado e livre.
+/// Tamanho do `df` antigo (toolbox, Android 5/6): "5.1G", "625.3M", "512K", "0".
+fn human_kb(s: &str) -> Option<u64> {
+    let (num, mult) = match s.chars().last()? {
+        'K' | 'k' => (&s[..s.len() - 1], 1.0),
+        'M' | 'm' => (&s[..s.len() - 1], 1024.0),
+        'G' | 'g' => (&s[..s.len() - 1], 1024.0 * 1024.0),
+        'T' | 't' => (&s[..s.len() - 1], 1024.0 * 1024.0 * 1024.0),
+        _ => (s, 1.0 / 1024.0),
+    };
+    num.parse::<f64>().ok().map(|v| (v * mult).round() as u64)
+}
+
+/// `df <caminho>`. Toybox: blocos de 1K (total, usado, livre). Toolbox antigo:
+/// tamanhos com unidade (Size, Used, Free).
 pub fn parse_df(text: &str) -> Option<Storage> {
     for line in text.lines().skip(1) {
         let f: Vec<&str> = line.split_whitespace().collect();
         if f.len() >= 4 {
             let n = |s: &str| s.parse::<u64>().ok();
             if let (Some(t), Some(u), Some(a)) = (n(f[1]), n(f[2]), n(f[3])) {
+                return Some(Storage { total_kb: t, used_kb: u, avail_kb: a });
+            }
+            if let (Some(t), Some(u), Some(a)) = (human_kb(f[1]), human_kb(f[2]), human_kb(f[3])) {
                 return Some(Storage { total_kb: t, used_kb: u, avail_kb: a });
             }
         }
@@ -534,6 +550,11 @@ emulator-5554          offline transport_id:9\n\n";
         assert_eq!(parse_inet("Device \"wlan0\" does not exist."), None);
         let df = "Filesystem      1K-blocks    Used Available Use% Mounted on\n/dev/block/dm-9   4978656 1678772   3290608  34% /data/user/0\n";
         assert_eq!(parse_df(df), Some(Storage { total_kb: 4978656, used_kb: 1678772, avail_kb: 3290608 }));
+        // Android 5.1 (GPOS700): toolbox com unidades.
+        let old = "Filesystem               Size     Used     Free   Blksize\n/data                    5.1G   625.3M     4.5G   4096\n";
+        let s = parse_df(old).unwrap();
+        assert_eq!(s.total_kb, (5.1f64 * 1024.0 * 1024.0).round() as u64);
+        assert_eq!(s.used_kb, (625.3f64 * 1024.0).round() as u64);
     }
 
     #[test]

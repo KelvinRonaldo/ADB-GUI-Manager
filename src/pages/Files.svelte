@@ -348,13 +348,21 @@
 
 <style>
   .panes {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
     align-items: stretch;
-    flex-wrap: wrap;
+  }
+  @container (min-width: 640px) {
+    .panes {
+      grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr);
+    }
+    .mid {
+      flex-direction: column;
+    }
   }
   .pane {
-    flex: 1 1 340px;
+    container-type: inline-size;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -422,10 +430,15 @@
   .meta.wide {
     min-width: 116px;
   }
+  @container (max-width: 420px) {
+    .meta.wide {
+      display: none;
+    }
+  }
   .mid {
-    flex: 0 0 120px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
   }
@@ -434,12 +447,17 @@
     text-align: center;
   }
   .bottom {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 12px;
+    align-items: start;
+  }
+  @container (min-width: 720px) {
+    .bottom {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
   }
   .opts {
-    flex: 1 1 380px;
     padding: 12px 14px;
     display: flex;
     flex-wrap: wrap;
@@ -454,7 +472,6 @@
     width: 100%;
   }
   .trs {
-    flex: 1 1 380px;
     min-width: 0;
     padding: 12px 14px;
     display: flex;

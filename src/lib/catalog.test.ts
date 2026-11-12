@@ -80,6 +80,10 @@ networking:
  forward --remove LOCAL   remove specific forward socket connection
  wait-for[-TRANSPORT]-STATE
      wait for device to be in the given state
+ bugreport [PATH]
+     write bugreport to given PATH [default=bugreport.zip];
+     devices that don't support zipped bug reports output to stdout.
+ devices [-l]             list connected devices (-l for long output)
 `;
     const s = helpCommands(help);
     expect(s.has('connect')).toBe(true);
@@ -90,5 +94,7 @@ networking:
     expect(ex).toContain('forward --list');
     expect(ex).toContain('tcp:<port>');
     expect(ex).toContain('forward --remove LOCAL');
+    // A continuação da ajuda do bugreport que começa com "devices" não entra.
+    expect(helpExcerpt(help, 'devices')).toBe('devices [-l]             list connected devices (-l for long output)');
   });
 });

@@ -2,7 +2,7 @@
   import Icon from '../components/Icon.svelte';
   import { t, lang, type Key } from '../lib/i18n.svelte';
   import { api, isTauri, listen, pickFiles } from '../lib/ipc';
-  import { app, confirmDialog } from '../lib/state.svelte';
+  import { adbChanged, app, confirmDialog } from '../lib/state.svelte';
   import { formatBytes } from '../lib/format';
   import type { AdbVersion } from '../lib/types';
 
@@ -48,7 +48,7 @@
     if (mode === 'point') {
       if (!valid) return;
       try {
-        app.adb = await api.useAdb('custom', path.trim(), remember);
+        adbChanged(await api.useAdb('custom', path.trim(), remember));
       } catch (e) {
         invalid = String(e);
       }
@@ -65,7 +65,7 @@
     const off = await listen<{ received: number; total?: number; phase: string }>('download', (p) => (progress = p));
     try {
       await api.downloadPlatformTools();
-      app.adb = await api.useAdb('downloaded', undefined, remember);
+      adbChanged(await api.useAdb('downloaded', undefined, remember));
     } catch (e) {
       downloadError = String(e);
     } finally {

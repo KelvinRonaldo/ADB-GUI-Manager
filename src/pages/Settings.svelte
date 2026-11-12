@@ -7,7 +7,7 @@
   import { api, listen, pickFiles, revealInFolder } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
   import { formatBytes } from '../lib/format';
-  import { app, applyTheme, checkServer, confirmDialog, restartServer, saveSettings, setLanguage, startTour, toast } from '../lib/state.svelte';
+  import { adbChanged, app, applyTheme, checkServer, confirmDialog, restartServer, saveSettings, setLanguage, startTour, toast } from '../lib/state.svelte';
   import type { AdbVersion, Settings, Theme } from '../lib/types';
 
   let mode = $state<Settings['adbMode']>(app.settings.adbMode);
@@ -57,7 +57,7 @@
   async function applyAdb() {
     applyError = null;
     try {
-      app.adb = await api.useAdb(mode, mode === 'custom' ? path.trim() : undefined, true);
+      adbChanged(await api.useAdb(mode, mode === 'custom' ? path.trim() : undefined, true));
       app.settings.adbMode = mode;
       app.settings.adbPath = mode === 'custom' ? path.trim() : '';
       toast(t('settings.saved'), 'success', undefined, 2000);
@@ -299,7 +299,7 @@
 <style>
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(440px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
     gap: 14px;
     align-items: start;
   }

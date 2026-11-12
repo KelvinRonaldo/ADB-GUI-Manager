@@ -11,7 +11,7 @@ mod stream;
 mod tracker;
 
 use state::AppState;
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::atomic::{AtomicBool, AtomicU64};
 use std::sync::{Arc, Mutex, RwLock};
 use tauri::Manager;
@@ -43,6 +43,8 @@ pub fn run() {
             let history_path = data_dir.join("history.json");
             let settings = settings::load(&settings_path);
             let history: VecDeque<_> = settings::load_history(&history_path).into_iter().collect();
+            // Os ids continuam depois do histórico, para uma entrada nova não ocupar o lugar de uma antiga.
+            let first_id = history.iter().map(|e| e.id).max().unwrap_or(0) + 1;
             let cli = cli_adb();
             let downloaded = data_dir.join("platform-tools").join(locate::ADB_EXE);
             let found = locate::locate(cli.as_deref(), &settings.adb_mode, &settings.adb_path, &downloaded);
@@ -54,12 +56,14 @@ pub fn run() {
                 history_path,
                 data_dir,
                 history: Mutex::new(history),
-                next_id: AtomicU64::new(1),
+                next_id: AtomicU64::new(first_id),
                 streams: Mutex::new(HashMap::new()),
                 ptys: Mutex::new(HashMap::new()),
+                pty_closing: Mutex::new(HashSet::new()),
                 tracker_paused: AtomicBool::new(false),
                 tracker_notify: Notify::new(),
                 cli_adb: cli,
+                devices: Mutex::new(Vec::new()),
             });
             // Sem "iniciar o servidor ao abrir" e com o servidor parado, não sobe sozinho.
             if !state.settings().start_server_on_launch && !tracker::server_running(&state) {
@@ -95,6 +99,7 @@ pub fn run() {
             commands::server_start,
             commands::server_stop,
             commands::history_clear,
+            commands::devices_current,
         ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o ADB GUI Manager");

@@ -2,6 +2,7 @@
 // backend simulado, em mock.ts.
 import type {
   AdbInfo,
+  Device,
   AdbVersion,
   InitInfo,
   LocalEntry,
@@ -70,6 +71,7 @@ export const api = {
   serverStart: () => invoke<RunResult>('server_start'),
   serverStop: () => invoke<RunResult>('server_stop'),
   historyClear: () => invoke<void>('history_clear'),
+  devicesCurrent: () => invoke<Device[]>('devices_current'),
 };
 
 export async function pickFiles(opts: { multiple?: boolean; directory?: boolean; filters?: { name: string; extensions: string[] }[]; title?: string } = {}): Promise<string[]> {

@@ -91,6 +91,7 @@
 
 <style>
   .top {
+    container-type: inline-size;
     min-height: 64px;
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -102,8 +103,17 @@
     flex: 0 0 auto;
   }
   .titles {
-    flex: 1 1 260px;
+    flex: 1 1 220px;
     min-width: 0;
+  }
+  @container (max-width: 860px) {
+    .target .serial,
+    .lbl {
+      display: none;
+    }
+    .target {
+      max-width: 280px;
+    }
   }
   h1 {
     font-size: 18px;

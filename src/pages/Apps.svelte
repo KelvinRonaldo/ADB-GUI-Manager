@@ -123,6 +123,7 @@
   }
 
   const menuFor = (pkg: string) => [
+    { label: t('apps.clearData'), onclick: () => clearData(pkg) },
     { label: t('apps.uninstall'), danger: true, onclick: () => uninstall(pkg) },
     { label: t('apps.extract'), onclick: () => extract(pkg) },
     { label: t('apps.permissions'), onclick: () => loadPerms(pkg) },
@@ -303,20 +304,20 @@
                 <tr>
                   <th scope="col">{t('apps.col.package')}</th>
                   <th scope="col">{t('apps.col.version')}</th>
-                  <th scope="col">{t('apps.col.uid')}</th>
+                  <th scope="col" class="wide-only">{t('apps.col.uid')}</th>
                   <th scope="col" class="r">{t('apps.col.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {#each shown as p (p.name)}
                   <tr>
-                    <td class="mono pkg">{p.name}</td>
+                    <td class="mono pkg" title={p.name}>{#each p.name.split('.') as part, i (i)}{i ? '.' : ''}<wbr />{part}{/each}</td>
                     <td>{p.versionCode ?? ''}</td>
-                    <td class="muted">{p.uid ?? ''}</td>
+                    <td class="muted wide-only">{p.uid ?? ''}</td>
                     <td class="r acts">
                       <button type="button" class="btn sm" onclick={() => sh(p.name, `monkey -p ${shQuote(p.name)} -c android.intent.category.LAUNCHER 1`, t('apps.opened', { pkg: p.name }))}>{t('apps.open')}</button>
                       <button type="button" class="btn sm" onclick={() => sh(p.name, `am force-stop ${shQuote(p.name)}`, t('apps.stopped', { pkg: p.name }))}>{t('apps.stop')}</button>
-                      <button type="button" class="btn sm" onclick={() => clearData(p.name)}>{t('apps.clearData')}</button>
+                      <button type="button" class="btn sm wide-only" onclick={() => clearData(p.name)}>{t('apps.clearData')}</button>
                       <Menu items={menuFor(p.name)} label={t('apps.more')} size={30} />
                     </td>
                   </tr>
@@ -412,17 +413,32 @@
 
 <style>
   .cols {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
-    align-items: flex-start;
+    align-items: start;
+  }
+  @container (min-width: 720px) {
+    .cols {
+      grid-template-columns: minmax(0, 1fr) 300px;
+    }
+  }
+  @container (min-width: 1000px) {
+    .cols {
+      grid-template-columns: minmax(0, 1fr) 360px;
+    }
   }
   .list {
-    flex: 999 1 520px;
+    container-type: inline-size;
     min-width: 0;
     display: flex;
     flex-direction: column;
     gap: 12px;
+  }
+  @container (max-width: 600px) {
+    .wide-only {
+      display: none;
+    }
   }
   .grow {
     flex: 1 1 auto;
@@ -435,7 +451,7 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 13px;
-    min-width: 560px;
+    min-width: 420px;
   }
   th {
     text-align: left;
@@ -451,7 +467,6 @@
   }
   .pkg {
     font-size: 12px;
-    overflow-wrap: anywhere;
   }
   .r {
     text-align: right;
@@ -468,7 +483,6 @@
     padding: 24px;
   }
   .inst {
-    flex: 1 1 360px;
     min-width: 0;
     padding: 16px;
     display: flex;

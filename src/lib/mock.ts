@@ -415,6 +415,8 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
     }
     case 'history_clear':
       return null;
+    case 'devices_current':
+      return adbOk ? DEVICES : [];
   }
   throw new Error(`mock: comando desconhecido ${cmd}`);
 }

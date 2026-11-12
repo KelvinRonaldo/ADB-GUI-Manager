@@ -350,10 +350,15 @@
 
 <style>
   .cols {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
-    align-items: flex-start;
+    align-items: start;
+  }
+  @container (min-width: 720px) {
+    .cols {
+      grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.6fr);
+    }
   }
   .box {
     padding: 18px;
@@ -361,13 +366,10 @@
     flex-direction: column;
     gap: 14px;
   }
-  .usb {
-    flex: 1 1 300px;
-    min-width: 0;
-  }
+  .usb,
   .wifi {
-    flex: 2 1 520px;
     min-width: 0;
+    container-type: inline-size;
   }
   .ttl {
     display: flex;
@@ -421,7 +423,7 @@
     gap: 18px;
   }
   .form {
-    flex: 1 1 280px;
+    flex: 1 1 240px;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -434,7 +436,7 @@
     gap: 10px;
   }
   .qr {
-    flex: 0 0 200px;
+    flex: 0 0 180px;
     display: flex;
     flex-direction: column;
     align-items: center;

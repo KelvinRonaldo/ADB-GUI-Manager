@@ -81,7 +81,7 @@
         items: [
           ['details.f.manufacturer', p['ro.product.manufacturer']],
           ['details.f.model', p['ro.product.model']],
-          ['details.f.serial', p['ro.serialno'] || serial],
+          ['details.f.serial', p['ro.serialno'] && p['ro.serialno'] !== serial ? `${serial} · ro.serialno ${p['ro.serialno']}` : serial],
           ['details.f.product', p['ro.product.name'] || device?.product],
         ],
       },
@@ -100,7 +100,7 @@
           ['details.f.abi', (p['ro.product.cpu.abilist'] || p['ro.product.cpu.abi'] || '').replace(/,/g, ', ')],
           ['details.f.density', p['ro.sf.lcd_density'] ? `${p['ro.sf.lcd_density']} dpi` : ''],
           ['details.f.battery', b?.level != null ? `${b.level}%${b.voltageMv ? ` · ${(b.voltageMv / 1000).toFixed(2)} V` : ''}${b.temperatureC != null ? ` · ${b.temperatureC} °C` : ''}` : ''],
-          ['details.f.storage', st ? `${formatBytes(st.availKb * 1024, lang.current)} / ${formatBytes(st.totalKb * 1024, lang.current)}` : ''],
+          ['details.f.storage', st ? t('details.storageFree', { free: formatBytes(st.availKb * 1024, lang.current), total: formatBytes(st.totalKb * 1024, lang.current) }) : ''],
         ],
       },
       {
@@ -294,13 +294,17 @@
     font-weight: 600;
   }
   .cols {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     align-items: stretch;
   }
+  @container (min-width: 760px) {
+    .cols {
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    }
+  }
   .left {
-    flex: 1 1 400px;
     min-width: 0;
     display: flex;
     flex-direction: column;
@@ -308,7 +312,7 @@
   }
   .blocks {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
     gap: 12px;
   }
   .blk {
@@ -360,7 +364,6 @@
     min-height: 200px;
   }
   .verbose {
-    flex: 1 1 400px;
     min-width: 0;
     background: var(--term-bg);
     border-radius: 10px;

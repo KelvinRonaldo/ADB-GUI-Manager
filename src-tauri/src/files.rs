@@ -31,7 +31,13 @@ pub fn list(path: &str) -> Result<Vec<LocalEntry>, String> {
                 .map(|d| d.as_millis() as u64),
         });
     }
-    out.sort_by(|a, b| b.is_dir.cmp(&a.is_dir).then(a.name.to_lowercase().cmp(&b.name.to_lowercase())));
+    // Pastas primeiro; dentro de cada grupo, os itens ocultos (.algo) vão para o fim.
+    out.sort_by(|a, b| {
+        b.is_dir
+            .cmp(&a.is_dir)
+            .then(a.name.starts_with('.').cmp(&b.name.starts_with('.')))
+            .then(a.name.to_lowercase().cmp(&b.name.to_lowercase()))
+    });
     Ok(out)
 }
 

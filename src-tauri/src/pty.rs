@@ -70,7 +70,10 @@ pub fn open(app: AppHandle, st: Arc<AppState>, args: Vec<String>, serial: Option
 
     let started = Instant::now();
     std::thread::spawn(move || {
-        let code = child.wait().map(|s| s.exit_code() as i32).unwrap_or(-1);
+        let mut code = child.wait().map(|s| s.exit_code() as i32).unwrap_or(-1);
+        if st.pty_closing.lock().map(|mut c| c.remove(&id)).unwrap_or(false) {
+            code = 130;
+        }
         // No Windows o leitor só termina quando o lado mestre fecha.
         std::thread::sleep(std::time::Duration::from_millis(150));
         if let Ok(mut m) = st.ptys.lock() {
@@ -98,6 +101,9 @@ pub fn resize(st: &AppState, id: u64, cols: u16, rows: u16) -> Result<(), String
 }
 
 pub fn close(st: &AppState, id: u64) {
+    if let Ok(mut c) = st.pty_closing.lock() {
+        c.insert(id);
+    }
     if let Ok(mut m) = st.ptys.lock() {
         if let Some(h) = m.get_mut(&id) {
             let _ = h.killer.kill();

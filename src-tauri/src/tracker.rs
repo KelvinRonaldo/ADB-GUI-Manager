@@ -51,7 +51,11 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                                 let (blocks, used) = split_track_blocks(&acc);
                                 acc.drain(..used);
                                 if let Some(last) = blocks.last() {
-                                    let _ = app.emit("devices", parse_devices(last));
+                                    let list = parse_devices(last);
+                                    if let Ok(mut d) = st.devices.lock() {
+                                        *d = list.clone();
+                                    }
+                                    let _ = app.emit("devices", list);
                                 }
                             }
                         }
@@ -60,6 +64,9 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                 }
             }
             let _ = child.kill().await;
+            if let Ok(mut d) = st.devices.lock() {
+                d.clear();
+            }
             let _ = app.emit("devices", Vec::<crate::parse::Device>::new());
             let _ = app.emit("server", serde_json::json!({ "running": false }));
             tokio::time::sleep(Duration::from_millis(1200)).await;

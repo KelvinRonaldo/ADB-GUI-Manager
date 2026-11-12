@@ -110,8 +110,10 @@ pub async fn adb_run_to_file(app: AppHandle, st: St<'_>, args: Vec<String>, seri
     runner::run_to_file(&app, &st, args, serial, &path).await
 }
 
+/// Assíncrono de propósito: o processo é criado pelo tokio, que precisa do runtime
+/// (um comando síncrono roda na thread principal, sem reactor, e derruba o app).
 #[tauri::command]
-pub fn stream_start(app: AppHandle, st: St<'_>, args: Vec<String>, serial: Option<String>) -> Result<u64, String> {
+pub async fn stream_start(app: AppHandle, st: St<'_>, args: Vec<String>, serial: Option<String>) -> Result<u64, String> {
     stream::start(app, st.inner().clone(), args, serial)
 }
 
@@ -280,4 +282,9 @@ pub fn history_clear(st: St<'_>) {
         h.clear();
     }
     settings::save_history(&st.history_path, &[]);
+}
+
+#[tauri::command]
+pub fn devices_current(st: St<'_>) -> Vec<parse::Device> {
+    st.devices.lock().map(|d| d.clone()).unwrap_or_default()
 }

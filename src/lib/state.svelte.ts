@@ -413,8 +413,8 @@ export function adoptInit(init: InitInfo): void {
 
 let started = false;
 export async function boot(): Promise<void> {
-  const init = await api.init();
-  adoptInit(init);
+  // Escutar antes de pedir o estado: o primeiro bloco do track-devices pode já ter
+  // passado, então a lista atual vem por devices_current logo em seguida.
   if (!started) {
     started = true;
     await listen<Device[]>('devices', onDevices);
@@ -424,7 +424,15 @@ export async function boot(): Promise<void> {
     setInterval(tick, 1000);
     setInterval(checkServer, 5000);
   }
+  const init = await api.init();
+  adoptInit(init);
   app.booted = true;
+  if (init.adb) await loadCurrentDevices();
+}
+
+export async function loadCurrentDevices(): Promise<void> {
+  const list = await api.devicesCurrent().catch(() => [] as Device[]);
+  if (list.length || !app.devicesLoaded) onDevices(list);
 }
 
 let lastSummaryRefresh = Date.now();
@@ -440,7 +448,8 @@ function tick(): void {
   }
 }
 
-/** Depois de escolher o adb na primeira execução. */
+/** Depois de escolher ou trocar o adb (primeira execução, configurações). */
 export function adbChanged(info: AdbInfo): void {
   app.adb = info;
+  setTimeout(loadCurrentDevices, 1500);
 }

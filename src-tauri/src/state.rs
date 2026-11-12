@@ -1,7 +1,7 @@
 use crate::locate::{AdbInfo, Candidate};
 use crate::settings::{LogEntry, Settings};
 use portable_pty::{ChildKiller, MasterPty};
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -25,9 +25,13 @@ pub struct AppState {
     pub next_id: AtomicU64,
     pub streams: Mutex<HashMap<u64, oneshot::Sender<()>>>,
     pub ptys: Mutex<HashMap<u64, PtyHandle>>,
+    /// Sessões que a pessoa fechou: o fim delas é "parado", não erro.
+    pub pty_closing: Mutex<HashSet<u64>>,
     pub tracker_paused: AtomicBool,
     pub tracker_notify: Notify,
     pub cli_adb: Option<String>,
+    /// Última lista do track-devices, para quem chegar depois do primeiro bloco.
+    pub devices: Mutex<Vec<crate::parse::Device>>,
 }
 
 impl AppState {
