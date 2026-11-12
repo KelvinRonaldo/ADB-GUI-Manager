@@ -23,7 +23,7 @@ parâmetros de cada comando, e mostra o comando exato de cada ação no registro
 Erros aparecem com a causa e a ação: reconectar o aparelho, tentar de novo, ou decidir, por exemplo instalar com
 `-d` quando o aparelho tem versão mais nova. A saída original do adb fica em "Detalhes técnicos".
 
-Na primeira abertura há um tour curto. No fim, o app pergunta se você quer o guia detalhado de cada página na primeira
+Na primeira abertura, o app pede o idioma antes de tudo. Depois vem um tour curto. No fim, o app pergunta se você quer o guia detalhado de cada página na primeira
 vez que ela abrir. F1 abre o guia da página atual.
 
 Idiomas: pt-BR e en-US. Tema: Sistema, Claro ou Escuro.

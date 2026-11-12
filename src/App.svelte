@@ -7,6 +7,7 @@
   import Guide from './components/Guide.svelte';
   import WifiWizard from './components/WifiWizard.svelte';
   import FirstRun from './pages/FirstRun.svelte';
+  import LanguagePick from './pages/LanguagePick.svelte';
   import Devices from './pages/Devices.svelte';
   import Details from './pages/Details.svelte';
   import Connect from './pages/Connect.svelte';
@@ -38,13 +39,14 @@
   });
 
   $effect(() => {
-    if (app.booted && app.adb && !app.settings.tourDone && !app.tour.active && !app.tour.done) startTour();
+    // O tour só começa depois de escolhido o idioma.
+    if (app.booted && app.settings.language && app.adb && !app.settings.tourDone && !app.tour.active && !app.tour.done) startTour();
   });
 
   function onkey(e: KeyboardEvent) {
     if (e.key === 'F1') {
       e.preventDefault();
-      if (app.adb) startPageGuide();
+      if (app.adb && app.settings.language) startPageGuide();
     }
   }
 </script>
@@ -55,6 +57,8 @@
   <div class="boot err">{bootError}</div>
 {:else if !app.booted}
   <div class="boot">ADB GUI Manager…</div>
+{:else if !app.settings.language}
+  <LanguagePick />
 {:else if !app.adb}
   <FirstRun />
 {:else}
