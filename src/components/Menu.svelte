@@ -17,10 +17,52 @@
   let expanded = $state<string | null>(null);
   let wrap: HTMLElement | undefined = $state();
   let btn: HTMLButtonElement | undefined = $state();
+  let menuEl: HTMLElement | undefined = $state();
+  // Posição na janela (fixed): o menu sai da área com rolagem e nunca fica atrás da
+  // barra lateral nem é cortado. Abre para o lado e para cima ou para baixo conforme o espaço.
+  let pos = $state({ left: 0, top: 0, ready: false });
+
+  function place() {
+    if (!btn || !menuEl) return;
+    const r = btn.getBoundingClientRect();
+    const w = menuEl.offsetWidth;
+    const h = menuEl.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const gap = 6;
+    // Não cobre a barra lateral: o limite da esquerda é o começo da área de conteúdo.
+    const minLeft = Math.max(8, (btn.closest('main')?.getBoundingClientRect().left ?? 0) + 8);
+    let left = r.right - w;
+    if (left < minLeft) left = r.left;
+    left = Math.min(Math.max(8, left), vw - w - 8);
+    let top = r.bottom + gap;
+    if (top + h > vh - 8 && r.top - gap - h >= 8) top = r.top - gap - h;
+    top = Math.min(Math.max(8, top), vh - h - 8);
+    pos = { left, top, ready: true };
+  }
+
+  let focusedOnce = false;
+  $effect(() => {
+    void expanded;
+    if (open && menuEl) {
+      place();
+      if (!focusedOnce) {
+        focusedOnce = true;
+        // Depois de visível: um elemento escondido não recebe foco.
+        requestAnimationFrame(() => menuEl?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+      }
+    }
+  });
+
+  function onScroll(e: Event) {
+    if (open && !(menuEl && menuEl.contains(e.target as Node))) close();
+  }
 
   function close() {
     open = false;
     expanded = null;
+    pos = { left: 0, top: 0, ready: false };
+    focusedOnce = false;
   }
   function pick(it: MenuItem) {
     if (it.children) {
@@ -50,7 +92,7 @@
   }
 </script>
 
-<svelte:window onclick={onWindow} />
+<svelte:window onclick={onWindow} onresize={() => open && place()} onscrollcapture={onScroll} />
 
 <div class="mw" bind:this={wrap} onkeydown={onkey} role="presentation">
   <button
@@ -63,14 +105,14 @@
     aria-haspopup="menu"
     aria-expanded={open}
     onclick={() => {
-      open = !open;
-      if (open) queueMicrotask(() => wrap?.querySelector<HTMLElement>('[role="menuitem"]')?.focus());
+      if (open) close();
+      else open = true;
     }}
   >
     <Icon name="more" size={16} />
   </button>
   {#if open}
-    <div class="menu" role="menu" aria-label={label}>
+    <div bind:this={menuEl} class="menu" role="menu" aria-label={label} style="left:{pos.left}px;top:{pos.top}px;visibility:{pos.ready ? 'visible' : 'hidden'}">
       {#each items as it, i (i)}
         {#if it.divider}
           <div class="div" role="separator"></div>
@@ -98,10 +140,10 @@
     display: inline-flex;
   }
   .menu {
-    position: absolute;
-    z-index: 40;
-    top: calc(100% + 6px);
-    right: 0;
+    position: fixed;
+    z-index: 90;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
     min-width: 260px;
     background: var(--surface);
     border: 1px solid var(--border-strong);
