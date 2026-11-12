@@ -106,15 +106,6 @@
     flex: 1 1 220px;
     min-width: 0;
   }
-  @container (max-width: 860px) {
-    .target .serial,
-    .lbl {
-      display: none;
-    }
-    .target {
-      max-width: 280px;
-    }
-  }
   h1 {
     font-size: 18px;
     font-weight: 700;
@@ -215,5 +206,15 @@
     padding: 10px;
     color: var(--muted);
     font-size: 13px;
+  }
+  /* Depois das regras base, para valer sobre elas. */
+  @container (max-width: 860px) {
+    .target .serial,
+    .lbl {
+      display: none;
+    }
+    .target {
+      max-width: 280px;
+    }
   }
 </style>

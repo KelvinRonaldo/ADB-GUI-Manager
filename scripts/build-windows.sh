@@ -48,6 +48,9 @@ if [ "${XWIN_ACCEPT_LICENSE:-}" != "1" ] && [ ! -d "${XWIN_CACHE_DIR:-$HOME/.cac
   exit 3
 fi
 export XWIN_ACCEPT_LICENSE=1
+# O SDK 10.0.26100 que o xwin escolhe sozinho vem sem os cabeçalhos x86_64 no manifesto
+# atual ("unable to find x86_64 headers for Win11SDK_10.0.26100"); o 22621 funciona.
+export XWIN_SDK_VERSION="${XWIN_SDK_VERSION:-10.0.22621}"
 
 if [ "$MODE" = portable ]; then
   npx tauri build --runner cargo-xwin --target "$TARGET" --no-bundle --features portable \

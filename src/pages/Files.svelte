@@ -357,9 +357,6 @@
     .panes {
       grid-template-columns: minmax(0, 1fr) 104px minmax(0, 1fr);
     }
-    .mid {
-      flex-direction: column;
-    }
   }
   .pane {
     container-type: inline-size;
@@ -435,10 +432,11 @@
       display: none;
     }
   }
+  /* Coluna entre os painéis: Enviar, push, Baixar, pull. Empilhado (tela estreita): uma linha. */
   .mid {
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
     justify-content: center;
     gap: 8px;
   }
@@ -531,5 +529,13 @@
   }
   .spacer {
     flex: 1 1 auto;
+  }
+  /* Depois da regra base de .mid, para valer sobre ela. */
+  @container (max-width: 639px) {
+    .mid {
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+    }
   }
 </style>
