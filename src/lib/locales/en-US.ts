@@ -142,6 +142,7 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'menu.disconnect': 'Disconnect',
 
   'act.screenshotSaved': 'Screenshot saved to {path}',
+  'act.wakeFailed': 'Could not turn on the screen of {name}. The image may come out black.',
   'act.recordTitle': 'Record screen',
   'act.recordSeconds': 'Duration in seconds (up to 180)',
   'act.recording': 'Recording {s} s on {name}…',

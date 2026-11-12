@@ -308,3 +308,79 @@ pub async fn device_wifi_ip(app: AppHandle, st: St<'_>, serial: String) -> Resul
     .await?;
     Ok(WifiIp { ip: parse::pick_wifi_ip(&r.stdout), result: r })
 }
+
+/// Injetor da tecla WAKEUP para aparelhos sem `input keyevent` (Gertec GPOS760).
+/// Fonte e build em resources/wake/.
+const WAKE_DEX: &[u8] = include_bytes!("../resources/wake/wake.dex");
+const WAKE_DEX_REMOTE: &str = "/data/local/tmp/adbgui-wake.dex";
+/// `w` diz se a tela está acesa de verdade: "Dreaming" (protetor de tela) e "Dozing" contam
+/// como apagada, senão a captura sai com o protetor. Android antigo sem mWakefulness: mScreenOn.
+const AWAKE_FN: &str = r#"w(){ P=$(dumpsys power); case "$P" in *mWakefulness=Awake*) return 0;; *mWakefulness=*) return 1;; *mScreenOn=true*) return 0;; esac; return 1; }"#;
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WakeResult {
+    /// "awake" (já estava acesa), "woke" (acendeu) ou "asleep" (não acendeu).
+    pub state: String,
+    pub method: Option<String>,
+}
+
+async fn shell_line(app: &AppHandle, st: &AppState, serial: &str, script: String, timeout_ms: u64) -> Result<RunResult, String> {
+    runner::run(app, st, vec!["shell".into(), script], RunOpts { serial: Some(serial.to_string()), timeout_ms: Some(timeout_ms), quiet: false }).await
+}
+
+/// Acende a tela antes de capturar ou gravar, para a imagem não sair preta.
+#[tauri::command]
+pub async fn device_wake(app: AppHandle, st: St<'_>, serial: String) -> Result<WakeResult, String> {
+    let first = shell_line(
+        &app,
+        &st,
+        &serial,
+        format!(
+            "{f}; if w; then echo AWAKE; else input keyevent 224 >/dev/null 2>&1; sleep 1; if w; then echo WOKE; else echo ASLEEP; fi; fi",
+            f = AWAKE_FN
+        ),
+        20_000,
+    )
+    .await?;
+    if first.code != 0 && !first.stdout.contains("AWAKE") && !first.stdout.contains("WOKE") && !first.stdout.contains("ASLEEP") {
+        return Err(runner::last_line(&first.stderr).unwrap_or_else(|| format!("exit {}", first.code)));
+    }
+    if first.stdout.contains("AWAKE") {
+        return Ok(WakeResult { state: "awake".into(), method: None });
+    }
+    if first.stdout.contains("WOKE") {
+        return Ok(WakeResult { state: "woke".into(), method: Some("input".into()) });
+    }
+    // Sem `input keyevent`: injeta a tecla pelo InputManager com o .dex embutido.
+    let local = st.data_dir.join("adbgui-wake.dex");
+    std::fs::create_dir_all(&st.data_dir).map_err(|e| e.to_string())?;
+    std::fs::write(&local, WAKE_DEX).map_err(|e| e.to_string())?;
+    let push = runner::run(
+        &app,
+        &st,
+        vec!["push".into(), local.to_string_lossy().to_string(), WAKE_DEX_REMOTE.into()],
+        RunOpts { serial: Some(serial.clone()), timeout_ms: Some(20_000), quiet: false },
+    )
+    .await?;
+    if push.code != 0 {
+        return Ok(WakeResult { state: "asleep".into(), method: None });
+    }
+    let second = shell_line(
+        &app,
+        &st,
+        &serial,
+        format!(
+            "{f}; CLASSPATH={d} app_process / Wake 224 >/dev/null 2>&1; sleep 1; if w; then echo WOKE; else echo ASLEEP; fi",
+            f = AWAKE_FN,
+            d = WAKE_DEX_REMOTE
+        ),
+        20_000,
+    )
+    .await?;
+    Ok(if second.stdout.contains("WOKE") {
+        WakeResult { state: "woke".into(), method: Some("injector".into()) }
+    } else {
+        WakeResult { state: "asleep".into(), method: None }
+    })
+}

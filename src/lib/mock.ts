@@ -448,6 +448,14 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       return null;
     case 'devices_current':
       return adbOk ? DEVICES : [];
+    case 'device_wake': {
+      const id = nextId++;
+      const c = `adb -s ${a.serial} shell "if dumpsys power | grep -qE '…'; then echo AWAKE; else input keyevent 224 …"`;
+      log(id, c, 'running');
+      await wait(300);
+      log(id, c, 'done', 0, 300);
+      return { state: 'woke', method: 'input' };
+    }
     case 'device_wifi_ip': {
       const id = nextId++;
       const c = `adb -s ${a.serial} shell "ip -f inet addr show"`;

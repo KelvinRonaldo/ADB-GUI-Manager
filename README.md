@@ -10,7 +10,7 @@ parâmetros de cada comando, e mostra o comando exato de cada ação no registro
 | Tela | O que faz |
 |---|---|
 | Primeira execução | Procura o adb (PATH, `ANDROID_HOME`, `ANDROID_SDK_ROOT`, SDK padrão). Sem adb, deixa apontar o executável ou baixar o platform-tools oficial do Google, com confirmação. |
-| Aparelhos | Lista ao vivo (`adb track-devices -l`) em cartões: Android, bateria, IP do Wi-Fi, armazenamento. Menu com reiniciar, passar para Wi-Fi, captura e gravação de tela, bugreport, root e remount. |
+| Aparelhos | Lista ao vivo (`adb track-devices -l`) em cartões: Android, bateria, IP do Wi-Fi, armazenamento. Menu com reiniciar, passar para Wi-Fi, captura e gravação de tela (acendem a tela antes, para a imagem não sair preta), bugreport, root e remount. |
 | Detalhes | Resumo, propriedades, bateria, rede, armazenamento, tela e processos, com a saída verbosa filtrável e exportável. |
 | Conectar | Espera por USB, pareamento por código ou QR code (Android 11+), USB para Wi-Fi guiado, conexão por IP, descoberta mDNS e conexões recentes. |
 | Apps | Pacotes com abrir, parar, limpar dados, desinstalar, extrair APK, permissões, desativar e informações. Instalação arrastando APKs, com todos os parâmetros do `install`. |
@@ -127,4 +127,5 @@ src-tauri/src/           backend (Rust)
   tracker.rs             lista de aparelhos ao vivo (track-devices)
   parse.rs               interpretação das saídas do adb, com testes de saídas reais
   download.rs            download do platform-tools
+  resources/wake/        injetor da tecla WAKEUP (.dex) para aparelhos sem `input keyevent` (GPOS760)
 ```

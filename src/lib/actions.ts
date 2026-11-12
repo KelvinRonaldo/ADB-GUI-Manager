@@ -95,9 +95,22 @@ export function toWifi(serial: string): void {
   startWifiFlow(serial);
 }
 
+/** Acende a tela antes de capturar ou gravar: com ela apagada a imagem sai preta. */
+async function wakeScreen(serial: string): Promise<void> {
+  try {
+    const w = await api.wake(serial);
+    // Recém-acesa: dá tempo de a tela desenhar antes da captura.
+    if (w.state === 'woke') await new Promise((r) => setTimeout(r, 900));
+    else if (w.state === 'asleep') toast(t('act.wakeFailed', { name: deviceName(serial) }), 'error');
+  } catch {
+    toast(t('act.wakeFailed', { name: deviceName(serial) }), 'error');
+  }
+}
+
 export async function screenshot(serial: string): Promise<void> {
   const path = await pickSavePath(`screenshot-${safe(deviceName(serial))}-${stamp()}.png`, [{ name: 'PNG', extensions: ['png'] }]);
   if (!path) return;
+  await wakeScreen(serial);
   try {
     const r = await api.runToFile(['exec-out', 'screencap', '-p'], serial, path);
     const err = classify(r);
@@ -114,6 +127,7 @@ export async function screenrecord(serial: string): Promise<void> {
   const secs = Math.min(180, Math.max(1, parseInt(v[0], 10) || 15));
   const name = deviceName(serial);
   const remote = `/sdcard/adbgui-rec-${stamp()}.mp4`;
+  await wakeScreen(serial);
   toast(t('act.recording', { s: secs, name }), 'info', undefined, (secs + 2) * 1000);
   const r = await api.run(['shell', `screenrecord --time-limit ${secs} ${remote}`], { serial, timeoutMs: (secs + 20) * 1000 });
   const err = classify(r);

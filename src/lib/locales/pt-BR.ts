@@ -140,6 +140,7 @@ export const ptBR = {
   'menu.disconnect': 'Desconectar',
 
   'act.screenshotSaved': 'Captura salva em {path}',
+  'act.wakeFailed': 'Não consegui acender a tela de {name}. A imagem pode sair preta.',
   'act.recordTitle': 'Gravar tela',
   'act.recordSeconds': 'Duração em segundos (até 180)',
   'act.recording': 'Gravando {s} s em {name}…',
