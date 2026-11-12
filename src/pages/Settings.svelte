@@ -3,6 +3,7 @@
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import ErrorState from '../components/ErrorState.svelte';
   import Icon from '../components/Icon.svelte';
+  import Flag from '../components/Flag.svelte';
   import { t, lang } from '../lib/i18n.svelte';
   import { api, listen, pickFiles, revealInFolder } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
@@ -260,13 +261,17 @@
             {/each}
           </div>
         </div>
-        <label class="field"
-          >{t('settings.language')}
-          <select class="select narrow" value={lang.current} onchange={(e) => setLanguage(e.currentTarget.value as Settings['language'])}>
-            <option value="pt-BR">Português (Brasil)</option>
-            <option value="en-US">English (US)</option>
-          </select>
-        </label>
+        <div class="field">
+          <span>{t('settings.language')}</span>
+          <div class="seg langs" role="group" aria-label={t('settings.language')}>
+            {#each [['pt-BR', 'Português (Brasil)'], ['en-US', 'English (US)']] as const as [code, name] (code)}
+              <button type="button" lang={code} aria-pressed={lang.current === code} onclick={() => setLanguage(code)}>
+                <Flag lang={code} width={22} />
+                {name}
+              </button>
+            {/each}
+          </div>
+        </div>
         <label class="check"
           >{t('settings.refreshEvery')}
           <input class="input tiny" type="number" min="10" max="3600" bind:value={app.settings.summaryRefreshSec} onchange={saveSettings} />
@@ -400,8 +405,10 @@
   .env .input {
     height: 32px;
   }
-  .narrow {
-    width: 240px;
+  .langs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
   .tiny {
     width: 70px;

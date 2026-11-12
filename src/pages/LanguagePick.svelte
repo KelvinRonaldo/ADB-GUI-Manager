@@ -2,6 +2,7 @@
   // Primeira tela do app: o idioma vem antes de tudo (antes de procurar o adb e do tour).
   // Os textos aparecem nos dois idiomas porque ainda não há escolha.
   import Icon from '../components/Icon.svelte';
+  import Flag from '../components/Flag.svelte';
   import { detectLang } from '../lib/i18n.svelte';
   import { setLanguage } from '../lib/state.svelte';
   import type { Lang } from '../lib/types';
@@ -33,7 +34,7 @@
     <div class="opts" role="group" aria-labelledby="lang-title">
       {#each ordered as o (o.lang)}
         <button type="button" class="opt" class:suggested={o.lang === detected} lang={o.lang} use:autofocus={o.lang === detected} onclick={() => choose(o.lang)}>
-          <span class="code">{o.lang}</span>
+          <span class="top"><Flag lang={o.lang} width={44} /><span class="code">{o.lang}</span></span>
           <span class="name">{o.name}</span>
           <span class="region">{o.region}</span>
           <span class="hint">{o.hint} <Icon name="right" size={14} stroke={2.2} /></span>
@@ -118,6 +119,12 @@
   .opt.suggested {
     border: 2px solid var(--accent);
     padding: 17px 17px 15px;
+  }
+  .top {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   }
   .code {
     font-family: var(--mono);
