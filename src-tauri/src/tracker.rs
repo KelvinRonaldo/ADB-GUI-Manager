@@ -2,7 +2,7 @@
 //! cada mudança, sem consulta periódica. Se o processo cai (servidor parado, adb
 //! trocado), recomeça; enquanto o servidor estiver parado pelo usuário, espera.
 
-use crate::parse::{parse_devices, split_track_blocks};
+use crate::parse::{parse_devices, push_track_bytes, split_track_blocks};
 use crate::runner::{full_args, tokio_command};
 use crate::state::AppState;
 use std::sync::atomic::Ordering;
@@ -61,7 +61,7 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                         match r {
                             Ok(0) | Err(_) => break,
                             Ok(n) => {
-                                acc.extend_from_slice(&buf[..n]);
+                                push_track_bytes(&mut acc, &buf[..n]);
                                 let (blocks, used) = split_track_blocks(&acc);
                                 acc.drain(..used);
                                 if let Some(last) = blocks.last() {

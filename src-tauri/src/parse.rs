@@ -101,6 +101,14 @@ pub fn parse_devices(text: &str) -> Vec<Device> {
     text.lines().filter_map(parse_device_line).collect()
 }
 
+/// Junta ao buffer do `track-devices` o que chegou do adb, sem os `\r`. No Windows o adb
+/// escreve em modo texto e troca cada `\n` por `\r\n`, mas o tamanho no começo do bloco
+/// conta só o `\n`: com o `\r`, o bloco passa do tamanho, sobra lixo no buffer e nenhum
+/// bloco seguinte é lido (a lista congela na primeira). Linha de aparelho não tem `\r`.
+pub fn push_track_bytes(acc: &mut Vec<u8>, chunk: &[u8]) {
+    acc.extend(chunk.iter().copied().filter(|&b| b != b'\r'));
+}
+
 /// `track-devices` manda blocos: 4 dígitos hexadecimais com o tamanho e depois o texto.
 /// Devolve os blocos completos e quanto do buffer foi consumido.
 pub fn split_track_blocks(buf: &[u8]) -> (Vec<String>, usize) {
@@ -552,6 +560,30 @@ emulator-5554          offline transport_id:9\n\n";
         let (b2, used2) = split_track_blocks(partial.as_bytes());
         assert!(b2.is_empty());
         assert_eq!(used2, 0);
+    }
+
+    #[test]
+    fn track_blocks_windows_crlf() {
+        // Saída real do adb 37 no Windows: o tamanho (00a6) conta `\n`, mas chega `\r\n`.
+        let first = "00a6PB1S259Q77959          device product:P2-A11 model:P2_A11 device:P2 transport_id:8\r\n\
+                     192.168.207.80:5555    device product:P2-A11 model:P2_A11 device:P2 transport_id:9\r\n";
+        let second = "0053PB1S259Q77959          device product:P2-A11 model:P2_A11 device:P2 transport_id:8\r\n";
+        let mut acc = Vec::new();
+        push_track_bytes(&mut acc, first.as_bytes());
+        let (blocks, used) = split_track_blocks(&acc);
+        acc.drain(..used);
+        assert_eq!(blocks.len(), 1);
+        assert_eq!(parse_devices(&blocks[0]).len(), 2);
+        assert!(acc.is_empty());
+        // O bloco seguinte também é lido (antes, a sobra do `\r` travava a lista aqui).
+        push_track_bytes(&mut acc, second.as_bytes());
+        let (blocks, used) = split_track_blocks(&acc);
+        acc.drain(..used);
+        assert_eq!(blocks.len(), 1);
+        let list = parse_devices(&blocks[0]);
+        assert_eq!(list.len(), 1);
+        assert_eq!(list[0].serial, "PB1S259Q77959");
+        assert!(acc.is_empty());
     }
 
     #[test]
