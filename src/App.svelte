@@ -18,6 +18,8 @@
   import Commands from './pages/Commands.svelte';
   import SettingsPage from './pages/Settings.svelte';
   import UpdateDialog from './components/UpdateDialog.svelte';
+  import CaptureDialog from './components/CaptureDialog.svelte';
+  import { cap } from './lib/capture.svelte';
   import { initUpdates, upd } from './lib/update.svelte';
   import { app, boot, startPageGuide, startTour } from './lib/state.svelte';
   import type { Page } from './lib/types';
@@ -92,6 +94,7 @@
 
 <Toasts />
 {#if upd.dialog}<UpdateDialog />{/if}
+{#if cap.open}<CaptureDialog />{/if}
 <ModalHost />
 <Guide />
 <WifiWizard />

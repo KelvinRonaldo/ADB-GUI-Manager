@@ -2,6 +2,7 @@
 // backend simulado, em mock.ts.
 import type {
   AdbInfo,
+  CaptureInfo,
   Device,
   AdbVersion,
   InitInfo,
@@ -69,6 +70,11 @@ export const api = {
   localRoots: () => invoke<string[]>('local_roots'),
   writeTextFile: (path: string, content: string) => invoke<void>('write_text_file', { path, content }),
   downloadPlatformTools: () => invoke<string>('platform_tools_download'),
+  capturePath: (name: string) => invoke<string>('capture_path', { name }),
+  captureRead: (path: string) => invoke<CaptureInfo>('capture_read', { path }),
+  captureCopy: (path: string) => invoke<void>('capture_copy', { path }),
+  captureSave: (path: string, dest: string) => invoke<void>('capture_save', { path, dest }),
+  captureDiscard: (path: string) => invoke<void>('capture_discard', { path }),
   updateInfo: () => invoke<UpdateInfo>('update_info'),
   updateCheck: () => invoke<UpdateCheck>('update_check'),
   updateDownload: () => invoke<void>('update_download'),

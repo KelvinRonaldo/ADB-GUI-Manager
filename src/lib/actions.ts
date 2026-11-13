@@ -4,6 +4,7 @@ import { t } from './i18n.svelte';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { tcpAddress } from './format';
 import { startWifiFlow } from './wififlow.svelte';
+import { openCapture } from './capture.svelte';
 import {
   confirmDialog,
   deviceName,
@@ -15,13 +16,13 @@ import {
 } from './state.svelte';
 import type { RunResult } from './types';
 
-function stamp(): string {
+export function stamp(): string {
   const d = new Date();
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`;
 }
 
-function safe(s: string): string {
+export function safe(s: string): string {
   return s.replace(/[^\w.-]+/g, '_');
 }
 
@@ -96,7 +97,7 @@ export function toWifi(serial: string): void {
 }
 
 /** Acende a tela antes de capturar ou gravar: com ela apagada a imagem sai preta. */
-async function wakeScreen(serial: string): Promise<void> {
+export async function wakeScreen(serial: string): Promise<void> {
   try {
     const w = await api.wake(serial);
     // Recém-acesa: dá tempo de a tela desenhar antes da captura.
@@ -108,17 +109,7 @@ async function wakeScreen(serial: string): Promise<void> {
 }
 
 export async function screenshot(serial: string): Promise<void> {
-  const path = await pickSavePath(`screenshot-${safe(deviceName(serial))}-${stamp()}.png`, [{ name: 'PNG', extensions: ['png'] }]);
-  if (!path) return;
-  await wakeScreen(serial);
-  try {
-    const r = await api.runToFile(['exec-out', 'screencap', '-p'], serial, path);
-    const err = classify(r);
-    if (err) return reportError(err, serial, () => screenshot(serial));
-    toast(t('act.screenshotSaved', { path }), 'success', { label: t('common.open'), run: () => revealInFolder(path) });
-  } catch (e) {
-    reportError(classify(String(e))!, serial, () => screenshot(serial));
-  }
+  openCapture(serial);
 }
 
 export async function screenrecord(serial: string): Promise<void> {
