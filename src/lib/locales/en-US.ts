@@ -55,6 +55,8 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'top.target': 'Target (-s)',
   'top.noDevices': 'No devices',
   'top.refresh': 'Refresh device list',
+  'top.screenshot': 'Take a screenshot of {name}',
+  'top.actions': 'Actions for {name}',
 
   'log.title': 'Command log',
   'log.subtitle': '· the exact adb command behind every action',

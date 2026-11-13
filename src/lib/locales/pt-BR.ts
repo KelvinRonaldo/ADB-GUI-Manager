@@ -53,6 +53,8 @@ export const ptBR = {
   'top.target': 'Alvo (-s)',
   'top.noDevices': 'Nenhum aparelho',
   'top.refresh': 'Atualizar lista de aparelhos',
+  'top.screenshot': 'Capturar tela de {name}',
+  'top.actions': 'Ações de {name}',
 
   'log.title': 'Registro de comandos',
   'log.subtitle': '· o comando adb exato de cada ação',

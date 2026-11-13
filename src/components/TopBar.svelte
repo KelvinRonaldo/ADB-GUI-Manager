@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { serialOf } from '../lib/deviceView';
+  import { deviceMenu, serialOf } from '../lib/deviceView';
+  import * as act from '../lib/actions';
   import Icon from './Icon.svelte';
+  import Menu from './Menu.svelte';
   import { t } from '../lib/i18n.svelte';
-  import { app, deviceName, refreshAll, setTarget, startPageGuide } from '../lib/state.svelte';
+  import { app, deviceName, openDetails, refreshAll, setTarget, startPageGuide } from '../lib/state.svelte';
   import { PAGE_GUIDES } from '../lib/guides';
 
   let { heading, sub = '' }: { heading: string; sub?: string } = $props();
@@ -11,6 +13,19 @@
   let btn: HTMLButtonElement | undefined = $state();
 
   const current = $derived(app.devices.find((d) => d.serial === app.settings.targetSerial));
+  // Ações do alvo em qualquer página: capturar a tela ou reiniciar não pede ir até Aparelhos.
+  const ready = $derived(current?.stateKind === 'device' ? current : undefined);
+  const targetMenu = $derived(ready ? deviceMenu(ready.serial, [{ label: t('nav.details'), onclick: () => openDetails(ready.serial) }]) : []);
+
+  // O alvo mudou: o botão pisca. Dois aparelhos do mesmo modelo só diferem no serial,
+  // e sem o destaque parece que nada mudou.
+  let flashId = $state(0);
+  let lastTarget: string | undefined;
+  $effect(() => {
+    const s = app.settings.targetSerial;
+    if (lastTarget !== undefined && s && s !== lastTarget) flashId++;
+    lastTarget = s;
+  });
 
   async function refresh() {
     refreshing = true;
@@ -51,6 +66,9 @@
         aria-labelledby="alvo-lbl"
         onclick={() => (open = !open)}
       >
+        {#if flashId}
+          {#key flashId}<span class="flash" aria-hidden="true"></span>{/key}
+        {/if}
         {#if current}
           <span class="dot" class:off={current.stateKind !== 'device'}></span>
           <span class="name">{deviceName(current.serial)}</span>
@@ -79,6 +97,18 @@
         </ul>
       {/if}
     </div>
+    {#if ready}
+      <button
+        type="button"
+        class="btn icon"
+        aria-label={t('top.screenshot', { name: deviceName(ready.serial) })}
+        title={t('top.screenshot', { name: deviceName(ready.serial) })}
+        onclick={() => act.screenshot(ready.serial)}
+      >
+        <Icon name="camera" size={16} />
+      </button>
+      <Menu items={targetMenu} label={t('top.actions', { name: deviceName(ready.serial) })} />
+    {/if}
     <button type="button" class="btn icon" aria-label={t('top.refresh')} title={t('top.refresh')} onclick={refresh} disabled={refreshing}>
       <Icon name="refresh" size={16} class={refreshing ? 'spin' : ''} />
     </button>
@@ -140,6 +170,38 @@
     background: var(--surface);
     cursor: pointer;
     max-width: 420px;
+  }
+  .target {
+    position: relative;
+    /* Contexto próprio: o destaque (z-index -1) fica sobre o fundo do botão e sob o texto. */
+    isolation: isolate;
+  }
+  /* Recriado a cada troca de alvo ({#key}), então a animação sempre recomeça na hora. */
+  .flash {
+    position: absolute;
+    inset: -1px;
+    border-radius: 8px;
+    border: 2px solid var(--accent);
+    background: var(--accent-soft);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0;
+    animation: target-flash 1.4s ease-out;
+  }
+  @keyframes target-flash {
+    0%,
+    40% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .flash {
+      animation-duration: 0.01s;
+    }
   }
   .name {
     font-weight: 500;
