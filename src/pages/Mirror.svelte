@@ -11,6 +11,7 @@
   import { classify, type AdbError } from '../lib/errors';
   import { app, deviceName, findDevice, saveSettings, targetSerial } from '../lib/state.svelte';
   import { serialOf } from '../lib/deviceView';
+  import { wakeScreen } from '../lib/actions';
   import {
     ACTION_DOWN,
     ACTION_MOVE,
@@ -79,6 +80,7 @@
       /* já fechado */
     }
     decoder = null;
+    ctx = null;
     config = null;
     codec = '';
     needKey = true;
@@ -94,7 +96,8 @@
             canvas.width = frame.displayWidth;
             canvas.height = frame.displayHeight;
           }
-          ctx ??= canvas.getContext('2d');
+          // O <canvas> é recriado a cada início: o contexto tem de ser o do canvas atual.
+          if (ctx?.canvas !== canvas) ctx = canvas.getContext('2d');
           ctx?.drawImage(frame, 0, 0);
         }
         frames++;
@@ -169,6 +172,8 @@
     screenOff = false;
     resetDecoder();
     try {
+      // Tela apagada vira vídeo preto; sem controle, nada a acenderia depois.
+      await wakeScreen(s);
       const q = QUALITY[quality];
       mirrorId = await mirrorStart(s, { maxSize: q.maxSize, bitRate: q.bitRate, maxFps, control, stayAwake }, onData);
       // Sem o Tauri (prévia no navegador) não há vídeo: mostra a área como se estivesse rodando.

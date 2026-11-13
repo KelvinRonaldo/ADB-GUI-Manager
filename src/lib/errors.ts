@@ -145,7 +145,7 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   if (/adbd cannot run as root in production builds/.test(low)) return make('notRoot', []);
   if (/MIRROR_(SERVER|TIMEOUT|PUSH|FORWARD|CONTROL)/.test(text)) return make('mirrorServer', ['retry', 'reconnect']);
   if (/run-as: package not debuggable|is not debuggable/.test(low)) return make('notDebuggable', []);
-  if (/run-as: unknown package/.test(low)) return make('runAsUnknown', ['retry']);
+  if (/run-as: (unknown package|package not an application)/.test(low)) return make('runAsUnknown', ['retry']);
   if (/read-only file system/.test(low)) return make('readOnly', []);
   if (/permission denied/.test(low)) return make('permissionDenied', ['retry']);
   if (/no such file or directory|does not exist/.test(low)) return make('noSuchFile', ['retry']);

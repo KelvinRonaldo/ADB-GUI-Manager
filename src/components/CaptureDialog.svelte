@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { serialOf } from '../lib/deviceView';
   // Prévia da captura de tela: imagem, dados e as ações Copiar, Salvar e Capturar de novo.
   import Modal from './Modal.svelte';
   import Icon from './Icon.svelte';
@@ -38,7 +39,7 @@
         <dt>{t('capture.device')}</dt>
         <dd>{cap.name}</dd>
         <dt>{t('capture.serial')}</dt>
-        <dd class="mono small">{cap.serial}</dd>
+        <dd class="mono small">{serialOf(cap.serial) ?? cap.serial}</dd>
         <dt>{t('capture.resolution')}</dt>
         <dd>{cap.info ? `${cap.info.width} × ${cap.info.height}` : '…'}</dd>
         <dt>{t('capture.size')}</dt>

@@ -311,8 +311,8 @@
             {#each app.settings.recentConnections as r (r.address)}
               <div class="li">
                 <div class="grow">
-                  <div class="strong">{r.name}</div>
-                  <div class="mono muted small">{#if r.serial}{t('connect.recentSerial', { serial: r.serial })} · {/if}{r.address} · {formatDate(r.at, lang.current)}</div>
+                  <div class="strong">{r.name}{#if r.serial}<span class="mono muted small sn">{t('connect.recentSerial', { serial: r.serial })}</span>{/if}</div>
+                  <div class="mono muted small">{r.address} · {formatDate(r.at, lang.current)}</div>
                 </div>
                 <button type="button" class="btn sm" disabled={busy} onclick={() => doIp(r.address)}>{t('common.connect')}</button>
                 <button type="button" class="btn sm icon ghost" aria-label={t('connect.forgetLabel')} title={t('connect.forgetLabel')} onclick={() => forget(r.address)}><Icon name="close" size={14} /></button>
@@ -328,6 +328,11 @@
 </div>
 
 <style>
+  .sn {
+    margin-left: 8px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
   .cols {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

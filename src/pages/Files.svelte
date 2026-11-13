@@ -107,7 +107,9 @@
     const v = await promptDialog(t('files.newFolder'), [{ label: t('files.newFolderName'), value: '' }]);
     const name = v?.[0]?.trim();
     if (!name || !serial) return;
-    const r = await api.run(['shell', `${asPrefix}mkdir -p ${shQuote(remotePath + name)}`], { serial, timeoutMs: 20000 });
+    // Como o app, o umask do run-as é 000: a pasta nasce só do app (700), como as do Android.
+    const mode = runAs ? '-m 700 ' : '';
+    const r = await api.run(['shell', `${asPrefix}mkdir -p ${mode}${shQuote(remotePath + name)}`], { serial, timeoutMs: 20000 });
     const err = classify(r);
     if (err) return reportError(err, serial, newFolder);
     loadRemote();
@@ -210,7 +212,7 @@
         const up = await api.run(['push', files[i], tmp], { serial: s, timeoutMs: 600000 });
         let err = classify(up);
         if (err) return { ok: false, error: err };
-        const cp = await api.run(['shell', `run-as ${shQuote(pkg)} cp ${shQuote(tmp)} ${shQuote(dest + names[i])}; r=$?; rm -f ${shQuote(tmp)}; exit $r`], { serial: s, timeoutMs: 120000 });
+        const cp = await api.run(['shell', `run-as ${shQuote(pkg)} cp ${shQuote(tmp)} ${shQuote(dest + names[i])} && run-as ${shQuote(pkg)} chmod 600 ${shQuote(dest + names[i])}; r=$?; rm -f ${shQuote(tmp)}; exit $r`], { serial: s, timeoutMs: 120000 });
         err = classify(cp);
         if (err) return { ok: false, error: err };
       }
