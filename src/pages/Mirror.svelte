@@ -24,6 +24,7 @@
     keyMsg,
     notificationsMsg,
     parseMessage,
+    resetVideoMsg,
     rotateMsg,
     scrollMsg,
     textMsg,
@@ -56,6 +57,9 @@
   let config: Uint8Array | null = null;
   let codec = '';
   let needKey = true;
+  let lastReset = 0;
+  let lastFrameAt = 0;
+  let lastPacketAt = 0;
   let frames = 0;
   let fpsTimer: ReturnType<typeof setInterval> | undefined;
 
@@ -101,6 +105,7 @@
           ctx?.drawImage(frame, 0, 0);
         }
         frames++;
+        lastFrameAt = Date.now();
         frame.close();
       },
       error: (e) => fail(decoderError(String(e))),
@@ -121,6 +126,7 @@
     }
     const p = m.packet;
     if (!p) return;
+    lastPacketAt = Date.now();
     if (p.config) {
       const c = avcCodec(p.data);
       if (!c) return fail(decoderError('SPS não encontrado no pacote de configuração'));
@@ -141,9 +147,13 @@
       data = merged;
     }
     needKey = false;
-    // Atrasou demais (fila cheia): descarta até o próximo quadro-chave.
-    if (decoder.decodeQueueSize > 8 && !p.key) {
+    // Atrasou demais: pede um recomeço do vídeo e descarta até o quadro-chave que ele traz.
+    // Sem pedir, a espera pode ser eterna: há encoder (MTK do L400) que só manda quadro-chave
+    // quando a imagem muda muito. Sem controle não há como pedir: segue decodificando tudo.
+    if (decoder.decodeQueueSize > 30 && !p.key && control && Date.now() - lastReset > 2000) {
+      lastReset = Date.now();
       needKey = true;
+      send(resetVideoMsg());
       return;
     }
     try {
@@ -170,6 +180,8 @@
     devName = '';
     size = { w: 0, h: 0 };
     screenOff = false;
+    lastFrameAt = 0;
+    lastPacketAt = 0;
     resetDecoder();
     try {
       // Tela apagada vira vídeo preto; sem controle, nada a acenderia depois.
@@ -186,6 +198,14 @@
       fpsTimer = setInterval(() => {
         fps = frames;
         frames = 0;
+        // Chega vídeo mas nenhum quadro sai há 3 s (esperando um quadro-chave que não vem):
+        // pede um recomeço do vídeo ao servidor.
+        const now = Date.now();
+        if (control && lastFrameAt && now - lastPacketAt < 1500 && now - lastFrameAt > 3000 && now - lastReset > 3000) {
+          lastReset = now;
+          needKey = true;
+          send(resetVideoMsg());
+        }
       }, 1000);
       canvas?.focus();
     } catch (e) {

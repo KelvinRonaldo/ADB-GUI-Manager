@@ -14,6 +14,7 @@ const TYPE_INJECT_SCROLL_EVENT = 3;
 const TYPE_EXPAND_NOTIFICATION_PANEL = 5;
 const TYPE_SET_DISPLAY_POWER = 10;
 const TYPE_ROTATE_DEVICE = 11;
+const TYPE_RESET_VIDEO = 17;
 
 /** Toque de dedo genérico (o servidor injeta como toque na tela, não como mouse). */
 const POINTER_ID_GENERIC_FINGER = -2n;
@@ -146,6 +147,11 @@ export function keyMsg(action: number, keycode: number, metaState = 0): number[]
 export function textMsg(text: string): number[] {
   const b = new TextEncoder().encode(text).slice(0, 300);
   return new Writer(5 + b.length).u8(TYPE_INJECT_TEXT).i32(b.length).raw(b).done();
+}
+
+/** Pede ao servidor um recomeço do vídeo (configuração + quadro-chave novos). */
+export function resetVideoMsg(): number[] {
+  return [TYPE_RESET_VIDEO];
 }
 
 export function rotateMsg(): number[] {
