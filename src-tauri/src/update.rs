@@ -381,6 +381,10 @@ pub async fn install(app: &AppHandle, st: Arc<AppState>) -> Result<(), String> {
         }
         // Windows: o plugin abre o instalador (/S /UPDATE /R) e encerra o app; o instalador reabre.
         u.install(&bytes).map_err(install_error)?;
+        #[cfg(target_os = "linux")]
+        if package_kind() == "appimage" {
+            relaunch_appimage();
+        }
         app2.restart();
     })
     .await
@@ -406,6 +410,32 @@ fn install_error(e: tauri_plugin_updater::Error) -> String {
             format!("UPDATE_SIGNATURE: {}", e)
         }
         e => format!("UPDATE_INSTALL: {}", e),
+    }
+}
+
+/// AppImage: abre o arquivo novo sem herdar os descritores do runtime antigo. O
+/// `app.restart()` herda o pipe que o runtime usa para saber se o app ainda roda, e o
+/// processo da versão antiga (com a montagem dela) ficava parado até a nova fechar.
+#[cfg(target_os = "linux")]
+fn relaunch_appimage() {
+    use std::os::unix::process::CommandExt;
+    let Some(path) = std::env::var_os("APPIMAGE").filter(|p| !p.is_empty()) else {
+        return;
+    };
+    let mut cmd = std::process::Command::new(path);
+    cmd.args(std::env::args_os().skip(1));
+    // SAFETY: só chamadas async-signal-safe (close) entre o fork e o exec.
+    unsafe {
+        cmd.pre_exec(|| {
+            for fd in 3..1024 {
+                libc::close(fd);
+            }
+            Ok(())
+        });
+    }
+    if cmd.spawn().is_ok() {
+        // Sem destrutores nem RunEvent::Exit, como o restart (não derruba o servidor do adb).
+        std::process::exit(0);
     }
 }
 

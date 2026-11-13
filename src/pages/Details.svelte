@@ -3,6 +3,7 @@
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import ErrorState from '../components/ErrorState.svelte';
   import Menu from '../components/Menu.svelte';
+  import Icon from '../components/Icon.svelte';
   import { t, lang, type Key } from '../lib/i18n.svelte';
   import { api, copyText, pickSavePath } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
@@ -148,7 +149,7 @@
   <div class="page-body">
     <PageGuideOffer page="details" />
     <div class="row">
-      <button type="button" class="linkbtn" onclick={() => navigate('devices')}>{t('details.back')}</button>
+      <button type="button" class="linkbtn" onclick={() => navigate('devices')}><Icon name="left" size={14} />{t('details.back')}</button>
       <div class="spacer"></div>
       {#if device?.stateKind === 'device'}
         <div class="row" data-guide="details-actions">

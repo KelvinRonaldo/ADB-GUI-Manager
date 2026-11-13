@@ -246,9 +246,9 @@
       </section>
 
       <div class="mid" data-guide="files-actions">
-        <button type="button" class="btn primary" disabled={!serial || !localSel.size} onclick={() => push()}>{t('files.push')}</button>
+        <button type="button" class="btn primary" disabled={!serial || !localSel.size} onclick={() => push()}>{t('files.push')}<Icon name="right" size={16} /></button>
         <div class="mono muted tiny">push</div>
-        <button type="button" class="btn outline" disabled={!serial || !remoteSel.size} onclick={pull}>{t('files.pull')}</button>
+        <button type="button" class="btn outline" disabled={!serial || !remoteSel.size} onclick={pull}><Icon name="left" size={16} />{t('files.pull')}</button>
         <div class="mono muted tiny">pull</div>
       </div>
 

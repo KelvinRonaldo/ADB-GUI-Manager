@@ -216,7 +216,7 @@
           {#each sessions as s (s.key)}
             <div class="tab" class:on={s.key === current}>
               <button type="button" role="tab" aria-selected={s.key === current} onclick={() => (current = s.key)}>
-                {s.title}{s.ended != null ? ' ·  ✕' : ''}
+                {s.title}{#if s.ended != null}<span class="ended" title={t('log.stopped')}><Icon name="stop" size={10} /></span>{/if}
               </button>
               <button type="button" class="close" aria-label={t('shell.closeTab')} title={t('shell.closeTab')} onclick={() => closeSession(s.key)}><Icon name="close" size={12} /></button>
             </div>
@@ -310,6 +310,12 @@
   }
   .tab.on {
     background: #23272f;
+  }
+  .ended {
+    display: inline-flex;
+    margin-left: 6px;
+    vertical-align: -1px;
+    opacity: 0.8;
   }
   .tab button[role='tab'] {
     border: 0;

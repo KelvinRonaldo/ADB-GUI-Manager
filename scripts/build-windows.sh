@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Build do ADB GUI Manager para Windows (x86_64, MSVC) a partir do Linux, com cargo-xwin.
 #
-#   scripts/build-windows.sh [--portable | --installer] [--accept-license]
+#   scripts/build-windows.sh [--portable | --installer] [--version X.Y.Z] [--accept-license]
 #
+# --version:           gera com outra versão sem mexer nos arquivos (builds de teste da atualização).
 # --portable (padrão): .zip com o .exe; dados e perfil do WebView2 ficam numa pasta
 #                      ao lado dele (adb-gui-manager-data).
 # --installer:         instalador NSIS (-setup.exe).
@@ -15,8 +16,12 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 MODE=portable
-for a in "$@"; do
+VERSION_ARG=""
+args=("$@")
+for ((i = 0; i < ${#args[@]}; i++)); do
+  a="${args[$i]}"
   case "$a" in
+    --version) i=$((i + 1)); VERSION_ARG="${args[$i]:-}" ;;
     --portable) MODE=portable ;;
     --installer) MODE=installer ;;
     --accept-license) export XWIN_ACCEPT_LICENSE=1 ;;
@@ -26,7 +31,9 @@ for a in "$@"; do
 done
 
 TARGET=x86_64-pc-windows-msvc
-VERSION=$(node -p "require('./package.json').version")
+VERSION=${VERSION_ARG:-$(node -p "require('./package.json').version")}
+EXTRA_CONFIG=()
+[ -n "$VERSION_ARG" ] && EXTRA_CONFIG=(--config "{\"version\":\"$VERSION_ARG\"}")
 
 missing=()
 command -v cargo-xwin >/dev/null || missing+=("cargo-xwin  →  cargo install --locked cargo-xwin")
@@ -54,7 +61,7 @@ export XWIN_SDK_VERSION="${XWIN_SDK_VERSION:-10.0.22621}"
 
 if [ "$MODE" = portable ]; then
   npx tauri build --runner cargo-xwin --target "$TARGET" --no-bundle --features portable \
-    --config src-tauri/tauri.portable.conf.json
+    --config src-tauri/tauri.portable.conf.json "${EXTRA_CONFIG[@]}"
   EXE="src-tauri/target/$TARGET/release/adb-gui-manager.exe"
   OUT=dist-windows
   STAGE="$OUT/ADB-GUI-Manager-$VERSION-windows-x64-portable"
@@ -78,7 +85,7 @@ EOF
   echo
   echo "Portátil: $OUT/$(basename "$STAGE").zip"
 else
-  npx tauri build --runner cargo-xwin --target "$TARGET" --bundles nsis
+  npx tauri build --runner cargo-xwin --target "$TARGET" --bundles nsis "${EXTRA_CONFIG[@]}"
   echo
   echo "Instalador: $(ls src-tauri/target/$TARGET/release/bundle/nsis/*.exe)"
 fi
