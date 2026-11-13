@@ -312,7 +312,7 @@
               <div class="li">
                 <div class="grow">
                   <div class="strong">{r.name}{#if r.serial}<span class="mono muted small sn">{t('connect.recentSerial', { serial: r.serial })}</span>{/if}</div>
-                  <div class="mono muted small">{r.address} · {formatDate(r.at, lang.current)}</div>
+                  <div class="mono muted small addr"><span>{r.address}</span><span>{formatDate(r.at, lang.current)}</span></div>
                 </div>
                 <button type="button" class="btn sm" disabled={busy} onclick={() => doIp(r.address)}>{t('common.connect')}</button>
                 <button type="button" class="btn sm icon ghost" aria-label={t('connect.forgetLabel')} title={t('connect.forgetLabel')} onclick={() => forget(r.address)}><Icon name="close" size={14} /></button>
@@ -328,6 +328,15 @@
 </div>
 
 <style>
+  /* Endereço e data: na janela estreita a data desce inteira, sem separador solto. */
+  .addr {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 12px;
+  }
+  .addr span {
+    white-space: nowrap;
+  }
   .sn {
     margin-left: 8px;
     font-weight: 400;
