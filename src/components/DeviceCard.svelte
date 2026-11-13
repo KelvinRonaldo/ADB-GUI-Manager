@@ -3,7 +3,7 @@
   import Menu from './Menu.svelte';
   import { t, type Key } from '../lib/i18n.svelte';
   import { androidLabel, friendlyName } from '../lib/format';
-  import { batteryText, deviceMenu, iconOf, openInstall, openShell, stateChip, storageText, toneOf, type ViewKind } from '../lib/deviceView';
+  import { batteryText, deviceMenu, iconOf, openInstall, openShell, stateChip, storageText, toneOf, type ViewKind, serialOf } from '../lib/deviceView';
   import {
     app,
     clock,
@@ -27,6 +27,7 @@
 
   const serial = $derived(device?.serial ?? lost?.serial ?? '');
   const summary = $derived(app.summaries[serial]);
+  const termSerial = $derived(serialOf(serial, summary));
   const isTarget = $derived(!!device && app.settings.targetSerial === serial && device.stateKind === 'device');
   const conn = $derived(device?.connection ?? 'wifi');
   const kind = $derived<ViewKind>(lost ? 'lost' : device!.stateKind);
@@ -78,8 +79,14 @@
 
   {#if kind === 'device'}
     <dl>
-      <dt>{conn === 'usb' || conn === 'emulator' ? t('devices.serial') : t('devices.address')}</dt>
-      <dd class="mono">{serial}</dd>
+      {#if termSerial}
+        <dt>{t('devices.serial')}</dt>
+        <dd class="mono">{termSerial}</dd>
+      {/if}
+      {#if termSerial !== serial}
+        <dt>{conn === 'wifi' ? t('devices.address') : t('devices.adbId')}</dt>
+        <dd class="mono">{serial}</dd>
+      {/if}
       {#if summary}
         <dt>{t('devices.battery')}</dt>
         <dd>{battery || '—'}</dd>

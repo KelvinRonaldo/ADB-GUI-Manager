@@ -15,6 +15,7 @@
     storageText,
     toneOf,
     type ViewKind,
+    serialOf,
   } from '../lib/deviceView';
   import {
     app,
@@ -44,6 +45,7 @@
 
   const serial = $derived(device?.serial ?? lost?.serial ?? '');
   const summary = $derived(app.summaries[serial]);
+  const termSerial = $derived(serialOf(serial, summary));
   const isTarget = $derived(!!device && app.settings.targetSerial === serial && device.stateKind === 'device');
   const conn = $derived(device?.connection ?? 'wifi');
   const kind = $derived<ViewKind>(lost ? 'lost' : device!.stateKind);
@@ -187,7 +189,9 @@
     {#if variant === 'list'}<span class="chip sm {stateChip(kind, tone)}">{stateLabel}</span>{/if}
   </div>
 
-  <div class="id mono" role="cell" title={serial}>{serial}</div>
+  <div class="id mono" role="cell" title={termSerial && termSerial !== serial ? t('top.adbId', { id: serial }) : serial}>
+    {termSerial ?? serial}{#if termSerial && termSerial !== serial && variant === 'list'}<span class="adbid">{serial}</span>{/if}
+  </div>
 
   {#if variant === 'list'}
     {#if ready && summary}
@@ -352,6 +356,13 @@
   .id {
     font-size: 12px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .adbid {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
     overflow: hidden;
     text-overflow: ellipsis;
   }

@@ -3,7 +3,7 @@
 import type { MenuItem } from '../components/Menu.svelte';
 import * as act from './actions';
 import { lang, t } from './i18n.svelte';
-import { formatBytes, tcpAddress } from './format';
+import { formatBytes, tcpAddress, terminalSerial } from './format';
 import { app, navigate, setTarget } from './state.svelte';
 import type { Device, StateKind, Summary } from './types';
 
@@ -24,6 +24,14 @@ export function storageText(s?: Summary | null, short = false): string {
   const used = formatBytes(st.usedKb * 1024, lang.current);
   const total = formatBytes(st.totalKb * 1024, lang.current);
   return t(short ? 'devices.storageShort' : 'devices.storageUsed', { used, total });
+}
+
+/**
+ * Serial do terminal para mostrar. Sem o resumo lido ainda: o do adb, se for USB (no Wi-Fi o
+ * "serial" do adb é o endereço e não serve).
+ */
+export function serialOf(serial: string, s?: Summary | null): string | null {
+  return terminalSerial((s ?? app.summaries[serial])?.props) ?? (isWifiSerial(serial) ? null : serial);
 }
 
 export function isWifiSerial(serial: string): boolean {
@@ -87,7 +95,8 @@ export function deviceMenu(serial: string, lead: MenuItem[] = []): MenuItem[] {
     { label: t('menu.unroot'), onclick: () => act.adbdRoot(serial, false) },
     { label: t('menu.remount'), onclick: () => act.remount(serial) },
     { divider: true, label: '' },
-    { label: t('menu.copySerial'), onclick: () => act.copySerial(serial) },
+    { label: t('menu.copySerial'), onclick: () => act.copySerial(serialOf(serial) ?? serial) },
+    ...(serialOf(serial) && serialOf(serial) !== serial ? [{ label: t('menu.copyAdbId'), onclick: () => act.copySerial(serial) }] : []),
     ...(wifi ? [{ label: t('menu.disconnect'), danger: true, onclick: () => act.disconnectDevice(serial) }] : []),
   ];
 }

@@ -40,6 +40,31 @@ export function friendlyName(d: Device | null | undefined, s?: Summary | null): 
   return d.serial;
 }
 
+/**
+ * Serial do terminal, que nem sempre é o que o adb mostra (o GPOS760 aparece no adb como
+ * 100950089069061453 e tem serial 5901152448001549). Cada fabricante guarda num lugar;
+ * sem nenhum, vale o ro.serialno.
+ */
+export const SERIAL_PROPS = [
+  'persist.sys.device.sn', // Gertec
+  'persist.sys.SN', // Gertec
+  'ro.sunmi.serial', // Sunmi
+  'pax.sp.SN', // PAX
+  'ro.fac.sn', // PAX
+  'ro.epay.serial', // PAX
+  'ro.serialno',
+  'ro.boot.serialno',
+];
+
+export function terminalSerial(props?: Record<string, string> | null): string | null {
+  if (!props) return null;
+  for (const k of SERIAL_PROPS) {
+    const v = (props[k] ?? '').trim();
+    if (v && !/^(unknown|null|none)$/i.test(v) && !/^0+$/.test(v)) return v;
+  }
+  return null;
+}
+
 export function androidLabel(s?: Summary | null): string {
   const p = s?.props;
   if (!p) return '';

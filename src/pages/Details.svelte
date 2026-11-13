@@ -10,6 +10,7 @@
   import { androidLabel, formatBytes, friendlyName } from '../lib/format';
   import { app, findDevice, navigate, refreshSummary, setTarget, toast } from '../lib/state.svelte';
   import * as act from '../lib/actions';
+  import { serialOf } from '../lib/deviceView';
 
   type Tab = 'summary' | 'props' | 'battery' | 'network' | 'storage' | 'screen' | 'processes' | 'raw';
   const TABS: Tab[] = ['summary', 'props', 'battery', 'network', 'storage', 'screen', 'processes', 'raw'];
@@ -82,7 +83,8 @@
         items: [
           ['details.f.manufacturer', p['ro.product.manufacturer']],
           ['details.f.model', p['ro.product.model']],
-          ['details.f.serial', p['ro.serialno'] && p['ro.serialno'] !== serial ? `${serial} · ro.serialno ${p['ro.serialno']}` : serial],
+          ['details.f.serial', serialOf(serial, summary) ?? ''],
+          ['details.f.adbId', serial],
           ['details.f.product', p['ro.product.name'] || device?.product],
         ],
       },
@@ -145,7 +147,7 @@
 </script>
 
 <div class="page">
-  <TopBar heading={device ? friendlyName(device, summary) : t('nav.devices')} sub={device ? [serial, device.connection.toUpperCase(), androidLabel(summary)].filter(Boolean).join(' · ') : ''} />
+  <TopBar heading={device ? friendlyName(device, summary) : t('nav.devices')} sub={device ? [serialOf(serial, summary) ?? serial, device.connection.toUpperCase(), androidLabel(summary)].filter(Boolean).join(' · ') : ''} />
   <div class="page-body">
     <PageGuideOffer page="details" />
     <div class="row">
