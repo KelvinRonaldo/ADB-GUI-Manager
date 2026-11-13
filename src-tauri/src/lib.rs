@@ -136,7 +136,9 @@ pub fn run() {
     app.run(|handle, event| {
         if let tauri::RunEvent::Exit = event {
             if let Some(st) = handle.try_state::<Arc<AppState>>() {
-                pty::close_all(&st);
+                // Shell, logcat e o `adb track-devices`: o processo sai sem destrutores e o que
+                // ficasse rodando virava órfão (no AppImage, segurando a montagem).
+                update::close_sessions(&st);
                 if st.settings().stop_server_on_exit {
                     if let Ok(path) = st.adb_path() {
                         let mut args = st.settings().server_args();

@@ -442,7 +442,7 @@ fn relaunch_appimage() {
 /// Encerra shell, logcat, gravações e o `adb track-devices` antes de trocar o app. O reinício
 /// sai sem rodar os destrutores, então filho que sobrar fica órfão (e, no AppImage, segura a
 /// montagem da versão antiga).
-fn close_sessions(st: &AppState) {
+pub fn close_sessions(st: &AppState) {
     st.tracker_paused.store(true, Ordering::SeqCst);
     st.tracker_notify.notify_waiters();
     crate::pty::close_all(st);
