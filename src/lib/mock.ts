@@ -190,7 +190,17 @@ function output(rest: string[], serial: string | null): { code: number; stdout: 
     }
     return { code: 0, stdout: `restarting in TCP mode port: ${rest[1]}\n`, stderr: '' };
   }
-  if (rest[0] === 'disconnect') return { code: 0, stdout: `disconnected ${rest[1] ?? 'everything'}\n`, stderr: '' };
+  if (rest[0] === 'disconnect') {
+    // Como o adb: o aparelho de rede sai da lista.
+    const gone = rest[1];
+    if (gone && DEVICES.some((d) => d.serial === gone)) {
+      setTimeout(() => {
+        DEVICES = DEVICES.filter((d) => d.serial !== gone);
+        emit('devices', { devices: DEVICES, first: false });
+      }, 200);
+    }
+    return { code: 0, stdout: `disconnected ${gone ?? 'everything'}\n`, stderr: '' };
+  }
   if (rest[0] === 'pair') return { code: 0, stdout: `Successfully paired to ${rest[1]} [guid=adb-XYZ]\n`, stderr: '' };
   if (rest[0] === 'mdns') return { code: 0, stdout: 'List of discovered mdns services\n', stderr: '' };
   if (rest[0] === 'wait-for-device') return { code: 0, stdout: '', stderr: '' };

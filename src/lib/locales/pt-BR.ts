@@ -24,7 +24,6 @@ export const ptBR = {
   'common.open': 'Abrir',
   'common.connect': 'Conectar',
   'common.pair': 'Parear',
-  'common.forget': 'Esquecer',
   'common.noTarget': 'Nenhum aparelho escolhido',
   'common.chooseDevice': 'Escolha um aparelho pronto na barra de cima.',
   'common.exitCode': 'saída {code}',
@@ -55,6 +54,9 @@ export const ptBR = {
   'top.refresh': 'Atualizar lista de aparelhos',
   'top.screenshot': 'Capturar tela de {name}',
   'top.actions': 'Ações de {name}',
+  'devices.remove': 'Remover da lista',
+  'devices.removeWifi': 'Desconectar e remover da lista',
+  'act.removed': '{name} saiu da lista',
 
   'log.title': 'Registro de comandos',
   'log.subtitle': '· o comando adb exato de cada ação',
@@ -153,7 +155,6 @@ export const ptBR = {
   'menu.unroot': 'adbd sem root',
   'menu.remount': 'Remontar partições (remount)',
   'menu.copySerial': 'Copiar serial',
-  'menu.disconnect': 'Desconectar',
 
   'act.screenshotSaved': 'Captura salva em {path}',
   'act.wakeFailed': 'Não consegui acender a tela de {name}. A imagem pode sair preta.',
@@ -167,7 +168,6 @@ export const ptBR = {
   'act.toWifiNoIp': 'O aparelho não tem IP no Wi-Fi. Conecte-o a uma rede e tente de novo.',
   'act.rebooting': 'Reiniciando {name}…',
   'act.serialCopied': 'Serial copiado',
-  'act.disconnected': '{name} desconectado',
   'act.done': 'Pronto: {cmd}',
   'act.reconnecting': 'Reconectando a {name}…',
   'act.reconnectWait': 'Esperando o aparelho voltar (até 30 s). Ligue o cabo de novo se ele saiu.',

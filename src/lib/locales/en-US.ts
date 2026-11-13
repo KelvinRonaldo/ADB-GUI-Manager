@@ -26,7 +26,6 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'common.open': 'Open',
   'common.connect': 'Connect',
   'common.pair': 'Pair',
-  'common.forget': 'Forget',
   'common.noTarget': 'No device selected',
   'common.chooseDevice': 'Pick a ready device in the top bar.',
   'common.exitCode': 'exit {code}',
@@ -57,6 +56,9 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'top.refresh': 'Refresh device list',
   'top.screenshot': 'Take a screenshot of {name}',
   'top.actions': 'Actions for {name}',
+  'devices.remove': 'Remove from list',
+  'devices.removeWifi': 'Disconnect and remove from list',
+  'act.removed': '{name} removed from the list',
 
   'log.title': 'Command log',
   'log.subtitle': '· the exact adb command behind every action',
@@ -155,7 +157,6 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'menu.unroot': 'adbd without root',
   'menu.remount': 'Remount partitions (remount)',
   'menu.copySerial': 'Copy serial',
-  'menu.disconnect': 'Disconnect',
 
   'act.screenshotSaved': 'Screenshot saved to {path}',
   'act.wakeFailed': 'Could not turn on the screen of {name}. The image may come out black.',
@@ -169,7 +170,6 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'act.toWifiNoIp': 'The device has no Wi-Fi IP. Connect it to a network and try again.',
   'act.rebooting': 'Rebooting {name}…',
   'act.serialCopied': 'Serial copied',
-  'act.disconnected': '{name} disconnected',
   'act.done': 'Done: {cmd}',
   'act.reconnecting': 'Reconnecting to {name}…',
   'act.reconnectWait': 'Waiting for the device to come back (up to 30 s). Plug the cable in again if it came off.',

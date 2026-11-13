@@ -97,6 +97,6 @@ export function deviceMenu(serial: string, lead: MenuItem[] = []): MenuItem[] {
     { divider: true, label: '' },
     { label: t('menu.copySerial'), onclick: () => act.copySerial(serialOf(serial) ?? serial) },
     ...(serialOf(serial) && serialOf(serial) !== serial ? [{ label: t('menu.copyAdbId'), onclick: () => act.copySerial(serial) }] : []),
-    ...(wifi ? [{ label: t('menu.disconnect'), danger: true, onclick: () => act.disconnectDevice(serial) }] : []),
+    ...(wifi ? [{ label: t('devices.removeWifi'), danger: true, onclick: () => act.removeFromList(serial) }] : []),
   ];
 }

@@ -8,6 +8,9 @@ import { openCapture } from './capture.svelte';
 import {
   confirmDialog,
   deviceName,
+  findDevice,
+  forgetLost,
+  markRemoved,
   navigate,
   promptDialog,
   reconnect,
@@ -147,7 +150,22 @@ export async function copySerial(serial: string): Promise<void> {
   toast(t('act.serialCopied'), 'success', undefined, 2500);
 }
 
-export async function disconnectDevice(serial: string): Promise<void> {
-  if (!tcpAddress(serial) && !serial.includes('._adb-tls-connect.')) return;
-  await runReport(['disconnect', serial], null, t('act.disconnected', { name: deviceName(serial) }));
+/**
+ * Tirar o aparelho da lista. Wi-Fi, pronto ou offline: `adb disconnect`, sem o app tentar
+ * reconectar depois. O que o app só tentava reconectar (perdido): para de tentar.
+ * USB não tem a opção: ele sai da lista quando o cabo sai.
+ */
+export async function removeFromList(serial: string): Promise<void> {
+  const name = deviceName(serial);
+  const listed = !!findDevice(serial);
+  const wifi = !!tcpAddress(serial) || serial.includes('._adb-tls-connect.');
+  if (listed && !wifi) return;
+  forgetLost(serial);
+  if (!listed) {
+    toast(t('act.removed', { name }), 'success', undefined, 2500);
+    return;
+  }
+  markRemoved(serial);
+  const r = await runReport(['disconnect', serial], null, t('act.removed', { name }));
+  if (!r) markRemoved(serial, false);
 }

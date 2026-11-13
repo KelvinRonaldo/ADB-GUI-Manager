@@ -8,7 +8,6 @@
     app,
     clock,
     MAX_RETRIES,
-    forgetLost,
     navigate,
     openDetails,
     reconnect,
@@ -145,7 +144,7 @@
     <div class="row acts">
       <button type="button" class="btn primary" disabled={busy || lost.busy} onclick={doReconnect}>{t('devices.reconnectNow')}</button>
       <button type="button" class="btn" onclick={() => navigate('connect')}>{t('devices.pairAgain')}</button>
-      <button type="button" class="btn ghost" onclick={() => forgetLost(serial)}>{t('common.forget')}</button>
+      <button type="button" class="btn ghost" onclick={() => act.removeFromList(serial)}>{t('devices.remove')}</button>
     </div>
   {:else if kind === 'bootloader' || kind === 'recovery' || kind === 'sideload'}
     <p>{t('devices.modeText', { mode: device?.state ?? kind })}</p>
@@ -161,6 +160,9 @@
     <div class="row acts">
       <button type="button" class="btn primary" disabled={busy} onclick={doReconnect}>{t('common.reconnect')}</button>
       <button type="button" class="btn" onclick={() => refreshAll(false)}>{t('common.retry')}</button>
+      {#if conn === 'wifi'}
+        <button type="button" class="btn ghost" onclick={() => act.removeFromList(serial)}>{t('devices.remove')}</button>
+      {/if}
     </div>
   {/if}
 </article>

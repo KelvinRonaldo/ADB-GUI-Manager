@@ -21,7 +21,6 @@
     app,
     clock,
     MAX_RETRIES,
-    forgetLost,
     navigate,
     openDetails,
     reconnect,
@@ -147,12 +146,19 @@
       case 'lost':
         return [
           { label: t('devices.pairAgain'), onclick: () => navigate('connect') },
-          { label: t('common.forget'), onclick: () => forgetLost(serial) },
+          { divider: true, label: '' },
+          { label: t('devices.remove'), danger: true, onclick: () => act.removeFromList(serial) },
         ];
       default:
         return [
           { label: t('common.retry'), onclick: () => refreshAll(false) },
           { label: t('menu.copySerial'), onclick: () => act.copySerial(serial) },
+          ...(conn === 'wifi'
+            ? [
+                { divider: true, label: '' },
+                { label: t('devices.remove'), danger: true, onclick: () => act.removeFromList(serial) },
+              ]
+            : []),
         ];
     }
   });

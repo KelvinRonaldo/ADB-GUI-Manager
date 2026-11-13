@@ -302,7 +302,10 @@ function onDevices(list: Device[], first = false): void {
   // Um aparelho pronto que sumiu: Wi-Fi tenta voltar sozinho; USB só avisa.
   if (!initial && app.serverRunning) {
     for (const [serial, prev] of before) {
-      if (now.has(serial) || prev.stateKind !== 'device' || isFlowSerial(serial) || recentlyHandled(serial)) continue;
+      if (now.has(serial)) continue;
+      // Tirado da lista pela pessoa: sumir era o pedido, não tenta voltar.
+      if (removed.delete(serial)) continue;
+      if (prev.stateKind !== 'device' || isFlowSerial(serial) || recentlyHandled(serial)) continue;
       const name = friendlyName(prev, app.summaries[serial]);
       if (tcpAddress(serial)) {
         app.lost[serial] = { serial, name, attempts: 0, nextAt: Date.now() + RETRY_EVERY_MS, gaveUp: false, busy: false };
@@ -344,6 +347,15 @@ export async function retryLost(serial: string): Promise<boolean> {
 
 export function forgetLost(serial: string): void {
   delete app.lost[serial];
+}
+
+/** Aparelhos que a pessoa tirou da lista (Wi-Fi, com `adb disconnect`): quando somem
+ * da lista do adb não viram "perdidos" e o app não tenta reconectar. */
+const removed = new Set<string>();
+
+export function markRemoved(serial: string, on = true): void {
+  if (on) removed.add(serial);
+  else removed.delete(serial);
 }
 
 export async function reconnectUsb(serial: string, name = deviceName(serial)): Promise<boolean> {
