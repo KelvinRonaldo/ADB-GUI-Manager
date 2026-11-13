@@ -128,7 +128,7 @@ export const ptBR = {
   'devices.viewCompact': 'Simplificada',
   'devices.colDevice': 'Aparelho',
   'devices.colConn': 'Conexão',
-  'devices.colId': 'Serial / endereço',
+  'devices.colId': 'Serial',
   'devices.colWifi': 'IP do Wi-Fi',
   'devices.storageShort': '{used} de {total}',
   'devices.msgUnauthorized': 'Toque em Permitir na tela do aparelho',
@@ -865,4 +865,9 @@ export const ptBR = {
   'capture.openFolder': 'Abrir pasta',
   'capture.copyFailed': 'Não deu para copiar a imagem: {error}',
   'capture.saveFailed': 'Não deu para salvar a imagem: {error}',
+
+  'devices.adbId': 'ID no adb',
+  'menu.copyAdbId': 'Copiar ID do adb',
+  'top.adbId': 'ID no adb: {id}',
+  'details.f.adbId': 'ID no adb',
 };

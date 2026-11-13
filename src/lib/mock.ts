@@ -63,6 +63,7 @@ const PROPS: Record<string, Record<string, string>> = {
     'ro.product.model': 'GPOS760',
     'ro.product.device': 'GPOS760',
     'ro.serialno': '7A1B2C3D',
+    'persist.sys.device.sn': '5901152448001549',
     'ro.build.version.release': '10',
     'ro.build.version.sdk': '29',
     'ro.build.version.security_patch': '2023-05-05',

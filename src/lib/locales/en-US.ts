@@ -130,7 +130,7 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'devices.viewCompact': 'Compact',
   'devices.colDevice': 'Device',
   'devices.colConn': 'Connection',
-  'devices.colId': 'Serial / address',
+  'devices.colId': 'Serial',
   'devices.colWifi': 'Wi-Fi IP',
   'devices.storageShort': '{used} of {total}',
   'devices.msgUnauthorized': 'Tap Allow on the device screen',
@@ -867,4 +867,9 @@ export const enUS: Record<keyof typeof ptBR, string> = {
   'capture.openFolder': 'Open folder',
   'capture.copyFailed': 'Could not copy the image: {error}',
   'capture.saveFailed': 'Could not save the image: {error}',
+
+  'devices.adbId': 'adb ID',
+  'menu.copyAdbId': 'Copy adb ID',
+  'top.adbId': 'adb ID: {id}',
+  'details.f.adbId': 'adb ID',
 };

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { serialOf } from '../lib/deviceView';
   import Icon from './Icon.svelte';
   import { t } from '../lib/i18n.svelte';
   import { app, deviceName, refreshAll, setTarget, startPageGuide } from '../lib/state.svelte';
@@ -54,7 +55,7 @@
           <span class="dot" class:off={current.stateKind !== 'device'}></span>
           <span class="name">{deviceName(current.serial)}</span>
           <span class="chip {current.connection} mini">{t(`conn.${current.connection}`)}</span>
-          <span class="mono serial">{current.serial}</span>
+          <span class="mono serial" title={t('top.adbId', { id: current.serial })}>{serialOf(current.serial) ?? current.serial}</span>
         {:else}
           <span class="muted">{app.devices.length ? t('common.noTarget') : t('top.noDevices')}</span>
         {/if}
@@ -68,7 +69,7 @@
                 <span class="dot" class:off={d.stateKind !== 'device'}></span>
                 <span class="name">{deviceName(d.serial)}</span>
                 <span class="chip {d.connection} mini">{t(`conn.${d.connection}`)}</span>
-                <span class="mono serial">{d.serial}</span>
+                <span class="mono serial" title={t('top.adbId', { id: d.serial })}>{serialOf(d.serial) ?? d.serial}</span>
                 {#if d.stateKind !== 'device'}<span class="chip warn mini">{d.state}</span>{/if}
               </button>
             </li>
