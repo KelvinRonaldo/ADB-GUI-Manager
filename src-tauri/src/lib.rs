@@ -3,6 +3,7 @@ mod commands;
 mod download;
 mod files;
 mod locate;
+mod mirror;
 mod parse;
 mod pty;
 mod runner;
@@ -86,6 +87,7 @@ pub fn run() {
                 tracker_paused: AtomicBool::new(false),
                 tracker_notify: Notify::new(),
                 tracker_live: AtomicBool::new(false),
+                mirrors: Mutex::new(HashMap::new()),
                 cli_adb: cli,
                 devices: Mutex::new(Vec::new()),
             });
@@ -139,6 +141,9 @@ pub fn run() {
             commands::devices_current,
             commands::device_wifi_ip,
             commands::device_wake,
+            commands::mirror_start,
+            commands::mirror_control,
+            commands::mirror_stop,
         ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o ADB GUI Manager");

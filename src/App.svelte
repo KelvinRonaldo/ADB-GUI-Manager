@@ -12,6 +12,7 @@
   import Details from './pages/Details.svelte';
   import Connect from './pages/Connect.svelte';
   import Apps from './pages/Apps.svelte';
+  import Mirror from './pages/Mirror.svelte';
   import Files from './pages/Files.svelte';
   import Shell from './pages/Shell.svelte';
   import Logcat from './pages/Logcat.svelte';
@@ -79,6 +80,8 @@
           <Connect />
         {:else if app.page === 'apps'}
           <Apps />
+        {:else if app.page === 'mirror'}
+          <Mirror />
         {:else if app.page === 'settings'}
           <SettingsPage />
         {/if}

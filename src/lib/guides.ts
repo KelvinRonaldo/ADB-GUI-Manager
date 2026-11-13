@@ -25,9 +25,10 @@ export const PAGE_GUIDES: Record<Page, GuideStep[]> = {
   details: steps('details', ['details-actions', 'details-tabs', 'details-verbose']),
   connect: steps('connect', ['connect-usb', 'connect-wifi', 'connect-mdns', 'connect-recent']),
   apps: steps('apps', ['apps-search', 'apps-table', 'apps-drop', 'apps-params']),
-  files: steps('files', ['files-local', 'files-remote', 'files-actions', 'files-transfers']),
+  files: steps('files', ['files-local', 'files-remote', 'files-actions', 'files-transfers', 'files-as']),
   shell: steps('shell', ['shell-tabs', 'shell-term', 'shell-saved-toggle']),
   logcat: steps('logcat', ['logcat-filters', 'logcat-lines', 'logcat-actions']),
+  mirror: steps('mirror', ['mirror-options', 'mirror-screen']),
   commands: steps('commands', ['commands-free', 'commands-catalog', 'commands-form', 'commands-output']),
   settings: steps('settings', ['settings-adb', 'settings-server', 'settings-env', 'settings-guides', 'settings-update']),
 };

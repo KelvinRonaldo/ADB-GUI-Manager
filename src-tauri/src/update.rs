@@ -446,6 +446,7 @@ pub fn close_sessions(st: &AppState) {
     st.tracker_paused.store(true, Ordering::SeqCst);
     st.tracker_notify.notify_waiters();
     crate::pty::close_all(st);
+    crate::mirror::stop_all(st);
     let ids: Vec<u64> = st.streams.lock().map(|m| m.keys().copied().collect()).unwrap_or_default();
     for id in ids {
         crate::stream::stop(st, id);

@@ -32,6 +32,8 @@ export type ErrorKind =
   | 'permissionDenied'
   | 'noSuchFile'
   | 'notDebuggable'
+  | 'mirrorServer'
+  | 'mirrorDecoder'
   | 'runAsUnknown'
   | 'readOnly'
   | 'notRoot'
@@ -141,6 +143,7 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   if (connectFailed) return make('connectFailed', ['retry', 'pairAgain']);
   if (installFailed) return make('installFailed', ['retry'], { code: 'Failure' });
   if (/adbd cannot run as root in production builds/.test(low)) return make('notRoot', []);
+  if (/MIRROR_(SERVER|TIMEOUT|PUSH|FORWARD|CONTROL)/.test(text)) return make('mirrorServer', ['retry', 'reconnect']);
   if (/run-as: package not debuggable|is not debuggable/.test(low)) return make('notDebuggable', []);
   if (/run-as: unknown package/.test(low)) return make('runAsUnknown', ['retry']);
   if (/read-only file system/.test(low)) return make('readOnly', []);

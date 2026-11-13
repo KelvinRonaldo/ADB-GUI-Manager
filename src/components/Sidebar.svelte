@@ -16,6 +16,7 @@
     { id: 'files', icon: 'files', key: 'nav.files' },
     { id: 'shell', icon: 'shell', key: 'nav.shell' },
     { id: 'logcat', icon: 'logcat', key: 'nav.logcat' },
+    { id: 'mirror', icon: 'mirror', key: 'nav.mirror' },
   ];
 
   const active = (id: Page) => app.page === id || (id === 'devices' && app.page === 'details');

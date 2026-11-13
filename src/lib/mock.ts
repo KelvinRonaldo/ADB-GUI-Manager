@@ -544,6 +544,17 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       return null;
     case 'devices_current':
       return adbOk ? DEVICES : [];
+    case 'mirror_start': {
+      const id = nextId++;
+      const c = `adb -s ${a.serial} shell CLASSPATH=/data/local/tmp/adbgui-scrcpy-server.jar app_process / com.genymobile.scrcpy.Server 5.0.1 …`;
+      log(id, c, 'running');
+      await wait(400);
+      return id;
+    }
+    case 'mirror_control':
+      return null;
+    case 'mirror_stop':
+      return null;
     case 'device_wake': {
       const id = nextId++;
       const c = `adb -s ${a.serial} shell "if dumpsys power | grep -qE '…'; then echo AWAKE; else input keyevent 224 …"`;

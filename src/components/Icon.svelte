@@ -2,6 +2,7 @@
   // Ícones de traço, desenhados aqui para não depender de fonte nem rede.
   const PATHS: Record<string, string> = {
     devices: '<rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/>',
+    mirror: '<rect x="2" y="4" width="14" height="10" rx="1.5"/><line x1="6" y1="18" x2="12" y2="18"/><line x1="9" y1="14" x2="9" y2="18"/><rect x="16" y="8" width="6" height="12" rx="1.2"/>',
     connect: '<path d="M4.5 10a11 11 0 0 1 15 0"/><path d="M7.8 13.4a6.4 6.4 0 0 1 8.4 0"/><circle cx="12" cy="17.5" r="1.2"/>',
     apps: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     files: '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',

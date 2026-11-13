@@ -37,6 +37,10 @@ export const DEFAULT_SETTINGS: Settings = {
   wifiPort: 5555,
   usbToWifiSkip: [],
   devicesView: 'grid',
+  mirrorQuality: 'medium',
+  mirrorFps: 30,
+  mirrorControl: true,
+  mirrorStayAwake: true,
   updateLastCheck: null,
 };
 

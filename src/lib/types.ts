@@ -169,6 +169,11 @@ export interface Settings {
   /** Seriais que o usuário pediu para não passar sozinhos. */
   usbToWifiSkip: string[];
   devicesView: DevicesView;
+  /** Espelhamento: qualidade (low/medium/high/original), fps e controle. */
+  mirrorQuality: string;
+  mirrorFps: number;
+  mirrorControl: boolean;
+  mirrorStayAwake: boolean;
   /** Última busca de atualização (só a que a pessoa pediu). */
   updateLastCheck: { at: number; found: string | null } | null;
 }
@@ -203,6 +208,7 @@ export type Page =
   | 'files'
   | 'shell'
   | 'logcat'
+  | 'mirror'
   | 'commands'
   | 'settings';
 
