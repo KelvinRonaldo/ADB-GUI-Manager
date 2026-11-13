@@ -368,6 +368,7 @@ pub async fn install(app: &AppHandle, st: Arc<AppState>) -> Result<(), String> {
     };
     let marker = update_dir(&st).join(PENDING_FILE);
     std::fs::write(&marker, serde_json::to_vec(&pending).unwrap_or_default()).map_err(|e| format!("UPDATE_PERMISSION: {}", e))?;
+    let tracker_was_paused = st.tracker_paused.load(Ordering::SeqCst);
     let app2 = app.clone();
     let st2 = st.clone();
     let result = tokio::task::spawn_blocking(move || -> Result<(), String> {
@@ -386,6 +387,11 @@ pub async fn install(app: &AppHandle, st: Arc<AppState>) -> Result<(), String> {
     .map_err(|e| e.to_string())?;
     if result.is_err() {
         let _ = std::fs::remove_file(&marker);
+        // Nada foi trocado: a lista de aparelhos volta a andar.
+        if !tracker_was_paused {
+            st.tracker_paused.store(false, Ordering::SeqCst);
+            st.tracker_notify.notify_waiters();
+        }
     }
     result
 }
@@ -403,15 +409,21 @@ fn install_error(e: tauri_plugin_updater::Error) -> String {
     }
 }
 
-/// Encerra shell, logcat e gravações antes de trocar o app.
+/// Encerra shell, logcat, gravações e o `adb track-devices` antes de trocar o app. O reinício
+/// sai sem rodar os destrutores, então filho que sobrar fica órfão (e, no AppImage, segura a
+/// montagem da versão antiga).
 fn close_sessions(st: &AppState) {
+    st.tracker_paused.store(true, Ordering::SeqCst);
+    st.tracker_notify.notify_waiters();
     crate::pty::close_all(st);
     let ids: Vec<u64> = st.streams.lock().map(|m| m.keys().copied().collect()).unwrap_or_default();
     for id in ids {
         crate::stream::stop(st, id);
     }
     let until = Instant::now() + Duration::from_secs(2);
-    while Instant::now() < until && st.streams.lock().map(|m| !m.is_empty()).unwrap_or(false) {
+    while Instant::now() < until
+        && (st.tracker_live.load(Ordering::SeqCst) || st.streams.lock().map(|m| !m.is_empty()).unwrap_or(false))
+    {
         std::thread::sleep(Duration::from_millis(50));
     }
 }

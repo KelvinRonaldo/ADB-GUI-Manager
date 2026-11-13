@@ -81,6 +81,7 @@ pub fn run() {
                 pty_closing: Mutex::new(HashSet::new()),
                 tracker_paused: AtomicBool::new(false),
                 tracker_notify: Notify::new(),
+                tracker_live: AtomicBool::new(false),
                 cli_adb: cli,
                 devices: Mutex::new(Vec::new()),
             });

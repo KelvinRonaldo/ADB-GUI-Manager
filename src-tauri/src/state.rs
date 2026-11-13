@@ -29,6 +29,8 @@ pub struct AppState {
     pub pty_closing: Mutex<HashSet<u64>>,
     pub tracker_paused: AtomicBool,
     pub tracker_notify: Notify,
+    /// O `adb track-devices` do tracker está rodando (para esperar ele sair antes de reiniciar o app).
+    pub tracker_live: AtomicBool,
     pub cli_adb: Option<String>,
     /// Última lista do track-devices, para quem chegar depois do primeiro bloco.
     pub devices: Mutex<Vec<crate::parse::Device>>,
