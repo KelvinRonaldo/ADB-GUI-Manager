@@ -17,6 +17,8 @@
   import Logcat from './pages/Logcat.svelte';
   import Commands from './pages/Commands.svelte';
   import SettingsPage from './pages/Settings.svelte';
+  import UpdateDialog from './components/UpdateDialog.svelte';
+  import { initUpdates, upd } from './lib/update.svelte';
   import { app, boot, startPageGuide, startTour } from './lib/state.svelte';
   import type { Page } from './lib/types';
 
@@ -33,6 +35,7 @@
   onMount(async () => {
     try {
       await boot();
+      initUpdates();
     } catch (e) {
       bootError = String(e);
     }
@@ -88,6 +91,7 @@
 {/if}
 
 <Toasts />
+{#if upd.dialog}<UpdateDialog />{/if}
 <ModalHost />
 <Guide />
 <WifiWizard />

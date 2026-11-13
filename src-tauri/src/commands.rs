@@ -5,7 +5,7 @@ use crate::parse::{self, Battery, MdnsService, RemoteEntry, Storage};
 use crate::runner::{self, RunOpts, RunResult};
 use crate::settings::{self, LogEntry, Settings};
 use crate::state::AppState;
-use crate::{download, files, pty, stream, tracker};
+use crate::{download, files, pty, stream, tracker, update};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::sync::atomic::Ordering;
@@ -254,6 +254,31 @@ pub fn write_text_file(path: String, content: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn platform_tools_download(app: AppHandle, st: St<'_>) -> Result<String, String> {
     download::download(&app, &st).await
+}
+
+#[tauri::command]
+pub fn update_info(app: AppHandle, st: St<'_>) -> update::UpdateInfo {
+    update::info(&app, &st)
+}
+
+#[tauri::command]
+pub async fn update_check(app: AppHandle, st: St<'_>) -> Result<update::CheckResult, String> {
+    update::check(&app, &st).await
+}
+
+#[tauri::command]
+pub async fn update_download(app: AppHandle, st: St<'_>) -> Result<(), String> {
+    update::download(&app, &st).await
+}
+
+#[tauri::command]
+pub fn update_cancel(app: AppHandle) {
+    update::cancel(&app);
+}
+
+#[tauri::command]
+pub async fn update_install(app: AppHandle, st: St<'_>) -> Result<(), String> {
+    update::install(&app, st.inner().clone()).await
 }
 
 #[tauri::command]

@@ -167,6 +167,8 @@ export interface Settings {
   /** Seriais que o usuário pediu para não passar sozinhos. */
   usbToWifiSkip: string[];
   devicesView: DevicesView;
+  /** Última busca de atualização (só a que a pessoa pediu). */
+  updateLastCheck: { at: number; found: string | null } | null;
 }
 
 export interface InitInfo {
@@ -201,3 +203,32 @@ export type Page =
   | 'logcat'
   | 'commands'
   | 'settings';
+
+// ---------- atualização do app ----------
+
+export type PackageKind = 'appimage' | 'deb' | 'rpm' | 'nsis' | 'msi' | 'portable' | 'macos' | 'dev';
+
+export interface UpdateInfo {
+  version: string;
+  package: PackageKind;
+  location: string;
+  canUpdate: boolean;
+  lastInstall: { result: 'updated' | 'notFinished'; from: string; to: string; notes?: string | null } | null;
+}
+
+export interface UpdateCheck {
+  available: boolean;
+  current: string;
+  version?: string | null;
+  notes?: string | null;
+  date?: string | null;
+  size?: number | null;
+  downloaded: boolean;
+  openSessions: number;
+}
+
+export interface UpdateProgress {
+  received: number;
+  total?: number | null;
+  bytesPerSec: number;
+}

@@ -7,9 +7,10 @@
     title,
     onclose,
     width = 520,
+    closable = true,
     children,
     footer,
-  }: { title: string; onclose: () => void; width?: number; children: Snippet; footer?: Snippet } = $props();
+  }: { title: string; onclose: () => void; width?: number; closable?: boolean; children: Snippet; footer?: Snippet } = $props();
 
   let dialog: HTMLElement | undefined = $state();
   const id = `m${Math.random().toString(36).slice(2)}`;
@@ -45,7 +46,7 @@
   <div bind:this={dialog} class="dialog" role="dialog" tabindex="-1" aria-modal="true" aria-labelledby={id} style="max-width: {width}px" onkeydown={onkey}>
     <header>
       <h2 {id}>{title}</h2>
-      <button type="button" class="x" aria-label={t('common.close')} onclick={onclose}><Icon name="close" size={16} /></button>
+      {#if closable}<button type="button" class="x" aria-label={t('common.close')} onclick={onclose}><Icon name="close" size={16} /></button>{/if}
     </header>
     <div class="body">{@render children()}</div>
     {#if footer}<footer>{@render footer()}</footer>{/if}

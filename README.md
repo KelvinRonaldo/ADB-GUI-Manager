@@ -18,7 +18,7 @@ parâmetros de cada comando, e mostra o comando exato de cada ação no registro
 | Shell | `adb shell` em terminal de verdade (PTY), várias abas, comandos salvos, rodar em todos os aparelhos. |
 | Logcat | Ao vivo, com nível, app (`--pid`), tags, regex (`-e`), buffer (`-b`), pausar, limpar e salvar. |
 | Todos os comandos | Linha livre com Tab completando, e um formulário para cada comando e parâmetro do adb, com opções globais, comando gerado, saída ao vivo e a ajuda do adb instalado. |
-| Configurações | Executável do adb, servidor (`-H`, `-P`, iniciar, parar, reiniciar), variáveis de ambiente do adb, tema, idioma e guias. |
+| Configurações | Executável do adb, servidor (`-H`, `-P`, iniciar, parar, reiniciar), variáveis de ambiente do adb, tema, idioma, guias, e Sobre e atualizações (versão, pacote em uso e a atualização dentro do app). |
 
 Erros aparecem com a causa e a ação: reconectar o aparelho, tentar de novo, ou decidir, por exemplo instalar com
 `-d` quando o aparelho tem versão mais nova. A saída original do adb fica em "Detalhes técnicos".
@@ -44,6 +44,24 @@ aparelho for pedido enquanto um fluxo roda, ele entra na fila, e a janela mostra
 Em Configurações › Aparelho novo por USB: passar sozinho (padrão), perguntar ou não fazer nada, e a porta TCP. Os
 aparelhos que já estavam ligados quando o app abriu, ou quando o servidor do adb reiniciou, não mudam. O "Passar para Wi-Fi" do
 cartão, dos detalhes e da tela Conectar usa o mesmo fluxo.
+
+## Atualização dentro do app
+
+Em Configurações › Sobre e atualizações, **Buscar atualizações** lê o `latest.json` da Release mais recente do
+GitHub (só quando a pessoa pede; nada é consultado ao abrir). Havendo versão nova, o aviso mostra as notas e
+pergunta se quer baixar e instalar. Confirmando, o app baixa (com progresso, cancelar e retomar), confere a
+assinatura, instala e reabre na mesma página:
+
+| Pacote | Como instala |
+|---|---|
+| AppImage | troca o próprio arquivo |
+| .deb | `dpkg -i` pelo `pkexec`: o sistema pede a senha de administrador uma vez |
+| Windows instalado | roda o instalador em silêncio (`/S`) e ele reabre o app |
+| Windows portátil | troca o .exe na mesma pasta; o antigo fica como `.old` e some na próxima abertura |
+
+Pacote baixado só é instalado se a assinatura conferir com a chave pública do `src-tauri/tauri.conf.json` e com a
+versão anunciada. Se o app reabrir ainda na versão antiga, o bloco mostra "Instalação não terminou" com
+"Instalar de novo", sem baixar outra vez.
 
 ## Como abrir com outro adb
 
@@ -92,6 +110,28 @@ A versão portátil (`--features portable` com `src-tauri/tauri.portable.conf.js
 o platform-tools baixado e o perfil do WebView2 em `adb-gui-manager-data`, ao lado do .exe. Ela precisa do WebView2
 Runtime, que já vem no Windows 10 e 11 atualizados.
 
+## Release
+
+1. Suba a versão nos cinco arquivos (`package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `Cargo.lock`,
+   `src-tauri/tauri.conf.json`) e gere os pacotes (Linux, `--installer` e `--portable` de Windows).
+2. Escreva as notas (uma linha `- ` por item; elas aparecem no aviso de atualização) e rode:
+
+```bash
+node scripts/release-manifest.mjs --out dist-release --notes notas.md \
+  --appimage "src-tauri/target/release/bundle/appimage/ADB GUI Manager_X.Y.Z_amd64.AppImage" \
+  --deb "src-tauri/target/release/bundle/deb/ADB GUI Manager_X.Y.Z_amd64.deb" \
+  --nsis "dist-windows/ADB GUI Manager_X.Y.Z_x64-setup.exe" \
+  --portable dist-windows/ADB-GUI-Manager-X.Y.Z-windows-x64-portable.zip
+```
+
+3. Publique na Release `vX.Y.Z` os pacotes, o `latest.json` e o `SHA256SUMS.txt` de `dist-release/`. O app sempre
+   lê o `latest.json` da Release marcada como a mais recente (pré-lançamento não conta).
+
+O script assina com a chave privada do atualizador (`~/.config/adb-gui-manager/updater.key`, fora do repositório).
+Sem ela não dá para publicar uma atualização que o app aceite: guarde uma cópia. Para testar sem publicar, sirva a
+pasta por HTTP, gere o manifesto com `--base-url http://localhost:<porta>/` e abra o app com
+`ADBGUI_UPDATE_ENDPOINT=http://localhost:<porta>/latest.json`.
+
 ## Desenvolvimento
 
 ```bash
@@ -104,7 +144,8 @@ cd src-tauri && cargo test   # testes do backend
 
 No navegador, a interface usa `src/lib/mock.ts` no lugar do Rust. Parâmetros de URL úteis:
 `?tour` (tour da primeira abertura), `?guides` (oferta de guia nas páginas), `?noadb` (sem adb encontrado),
-`?fresh` (sem configurações salvas). No console, `__mockPlugUsb()` simula um aparelho USB novo para testar o
+`?fresh` (sem configurações salvas), e para a atualização `?update=none|neterr|interrupt|sig|perm`,
+`?pkg=deb|portable|dev`, `?updated` (acabou de reabrir na versão nova) e `?notfinished`. No console, `__mockPlugUsb()` simula um aparelho USB novo para testar o
 fluxo USB → Wi-Fi, e `__mockPlugUsb(true)` simula o `connect` recusado.
 
 ## Estrutura

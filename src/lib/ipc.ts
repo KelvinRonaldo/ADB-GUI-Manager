@@ -12,6 +12,8 @@ import type {
   RunResult,
   Settings,
   Summary,
+  UpdateCheck,
+  UpdateInfo,
 } from './types';
 
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
@@ -67,6 +69,11 @@ export const api = {
   localRoots: () => invoke<string[]>('local_roots'),
   writeTextFile: (path: string, content: string) => invoke<void>('write_text_file', { path, content }),
   downloadPlatformTools: () => invoke<string>('platform_tools_download'),
+  updateInfo: () => invoke<UpdateInfo>('update_info'),
+  updateCheck: () => invoke<UpdateCheck>('update_check'),
+  updateDownload: () => invoke<void>('update_download'),
+  updateCancel: () => invoke<void>('update_cancel'),
+  updateInstall: () => invoke<void>('update_install'),
   serverStatus: () => invoke<boolean>('server_status'),
   serverStart: () => invoke<RunResult>('server_start'),
   serverStop: () => invoke<RunResult>('server_stop'),
@@ -90,6 +97,15 @@ export async function pickSavePath(defaultPath: string, filters?: { name: string
   if (!isTauri) return '/home/usuario/' + defaultPath;
   const { save } = await import('@tauri-apps/plugin-dialog');
   return save({ defaultPath, filters });
+}
+
+export async function openUrl(url: string): Promise<void> {
+  if (!isTauri) {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+  const { openUrl } = await import('@tauri-apps/plugin-opener');
+  await openUrl(url);
 }
 
 export async function revealInFolder(path: string): Promise<void> {
