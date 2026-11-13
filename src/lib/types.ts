@@ -232,3 +232,12 @@ export interface UpdateProgress {
   total?: number | null;
   bytesPerSec: number;
 }
+
+// ---------- captura de tela ----------
+
+export interface CaptureInfo {
+  dataUrl: string;
+  width: number;
+  height: number;
+  size: number;
+}

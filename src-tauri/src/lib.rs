@@ -1,3 +1,4 @@
+mod capture;
 mod commands;
 mod download;
 mod files;
@@ -47,6 +48,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_clipboard_manager::init())
         .manage(update::UpdateState::default())
         .setup(|app| {
             #[cfg(feature = "portable")]
@@ -89,6 +91,7 @@ pub fn run() {
             if !state.settings().start_server_on_launch && !tracker::server_running(&state) {
                 state.tracker_paused.store(true, std::sync::atomic::Ordering::SeqCst);
             }
+            capture::cleanup(&state);
             tracker::spawn(app.handle().clone(), state.clone());
             app.manage(state);
             #[cfg(feature = "portable")]
@@ -117,6 +120,11 @@ pub fn run() {
             commands::local_roots,
             commands::write_text_file,
             commands::platform_tools_download,
+            commands::capture_path,
+            commands::capture_read,
+            commands::capture_copy,
+            commands::capture_save,
+            commands::capture_discard,
             commands::update_info,
             commands::update_check,
             commands::update_download,

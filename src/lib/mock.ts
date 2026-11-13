@@ -39,6 +39,14 @@ const NEW_USB: Device = { serial: 'NEWUSB01', state: 'device', stateKind: 'devic
 const NEW_IP = '192.168.0.77';
 let failConnect = false;
 let updateCanceled = false;
+const MOCK_SHOT = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="720" height="1280" viewBox="0 0 720 1280">' +
+    '<rect width="720" height="1280" fill="#ffffff"/><rect width="720" height="64" fill="#1e3a8a"/><rect y="64" width="720" height="150" fill="#1d4ed8"/>' +
+    '<text x="40" y="160" font-family="sans-serif" font-size="44" fill="#ffffff">App do aparelho</text>' +
+    '<rect x="40" y="260" width="640" height="200" rx="20" fill="#eef2ff"/><rect x="40" y="500" width="300" height="220" rx="20" fill="#f3f4f6"/><rect x="380" y="500" width="300" height="220" rx="20" fill="#f3f4f6"/>' +
+    '<rect x="40" y="1120" width="640" height="100" rx="20" fill="#1d4ed8"/></svg>',
+);
+
 const MOCK_NOTES = '- Atualização dentro do app, pelas Releases do GitHub\n- Correção: a versão no Sobre mostrava 0.1.0';
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__mockPlugUsb = (fail = false) => {
@@ -443,6 +451,16 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       emit('download', { received: 7500000, total: 7500000, phase: 'extract' });
       await wait(300);
       return '/home/usuario/.local/share/br.com.kelvinronaldo.adbguimanager/platform-tools/adb';
+    case 'capture_path':
+      return `/home/usuario/.local/share/br.com.kelvinronaldo.adbguimanager/captures/${String(a.name)}`;
+    case 'capture_read':
+      await wait(150);
+      return { dataUrl: MOCK_SHOT, width: 720, height: 1280, size: 421_888 };
+    case 'capture_copy':
+    case 'capture_save':
+    case 'capture_discard':
+      await wait(150);
+      return null;
     // Atualização do app. ?update=none|neterr|interrupt|sig|perm, ?pkg=deb|portable|dev,
     // ?updated (acabou de reabrir na versão nova), ?notfinished.
     case 'update_info': {

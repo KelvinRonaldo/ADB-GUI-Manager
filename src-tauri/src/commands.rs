@@ -5,7 +5,7 @@ use crate::parse::{self, Battery, MdnsService, RemoteEntry, Storage};
 use crate::runner::{self, RunOpts, RunResult};
 use crate::settings::{self, LogEntry, Settings};
 use crate::state::AppState;
-use crate::{download, files, pty, stream, tracker, update};
+use crate::{capture, download, files, pty, stream, tracker, update};
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::sync::atomic::Ordering;
@@ -254,6 +254,31 @@ pub fn write_text_file(path: String, content: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn platform_tools_download(app: AppHandle, st: St<'_>) -> Result<String, String> {
     download::download(&app, &st).await
+}
+
+#[tauri::command]
+pub fn capture_path(st: St<'_>, name: String) -> Result<String, String> {
+    capture::temp_path(&st, &name)
+}
+
+#[tauri::command]
+pub fn capture_read(st: St<'_>, path: String) -> Result<capture::CaptureInfo, String> {
+    capture::read(&st, &path)
+}
+
+#[tauri::command]
+pub fn capture_copy(app: AppHandle, st: St<'_>, path: String) -> Result<(), String> {
+    capture::copy(&app, &st, &path)
+}
+
+#[tauri::command]
+pub fn capture_save(st: St<'_>, path: String, dest: String) -> Result<(), String> {
+    capture::save(&st, &path, &dest)
+}
+
+#[tauri::command]
+pub fn capture_discard(st: St<'_>, path: String) {
+    capture::discard(&st, &path);
 }
 
 #[tauri::command]
