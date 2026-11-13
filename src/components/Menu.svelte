@@ -138,6 +138,7 @@
   .mw {
     position: relative;
     display: inline-flex;
+    vertical-align: middle;
   }
   .menu {
     position: fixed;

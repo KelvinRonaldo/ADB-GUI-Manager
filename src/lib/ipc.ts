@@ -61,8 +61,8 @@ export const api = {
   ptyClose: (id: number) => invoke<void>('pty_close', { id }),
   summary: (serial: string, quiet = true) => invoke<Summary>('device_summary', { serial, quiet }),
   mdns: (quiet = true) => invoke<MdnsService[]>('mdns_services', { quiet }),
-  remoteList: (serial: string, path: string) =>
-    invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path }),
+  remoteList: (serial: string, path: string, runAs: string | null = null) =>
+    invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path, runAs }),
   packages: (serial: string, filter: string) =>
     invoke<{ packages: Package[]; result: RunResult }>('packages_list', { serial, filter }),
   localList: (path: string) => invoke<LocalEntry[]>('local_list', { path }),

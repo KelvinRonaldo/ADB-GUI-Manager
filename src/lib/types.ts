@@ -124,6 +124,8 @@ export interface RecentConnection {
   address: string;
   name: string;
   at: number;
+  /** Serial do terminal (etiqueta), quando já se conhece. */
+  serial?: string;
 }
 
 export interface SavedCommand {

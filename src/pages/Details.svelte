@@ -155,6 +155,11 @@
       <div class="spacer"></div>
       {#if device?.stateKind === 'device'}
         <div class="row" data-guide="details-actions">
+          {#if app.settings.targetSerial === serial}
+            <span class="chip ok is-target"><Icon name="check" size={14} />{t('details.isTarget')}</span>
+          {:else}
+            <button type="button" class="btn" onclick={() => setTarget(serial)}><Icon name="star" size={15} />{t('details.useTarget')}</button>
+          {/if}
           <span class="reboot"><span class="muted small">{t('details.reboot')}</span><Menu items={rebootItems} label={t('details.reboot')} size={34} /></span>
           <button type="button" class="btn" onclick={() => act.screenshot(serial)}>{t('menu.screenshot')}</button>
           {#if device.connection === 'usb'}<button type="button" class="btn" onclick={() => act.toWifi(serial)}>{t('connect.usbButton')}</button>{/if}
@@ -263,6 +268,13 @@
 </div>
 
 <style>
+  .is-target {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 12px;
+  }
   .spacer {
     flex: 1 1 auto;
   }

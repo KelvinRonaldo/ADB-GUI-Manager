@@ -147,6 +147,7 @@ h3 {
 /* Botões */
 .btn {
   display: inline-flex;
+  vertical-align: middle;
   align-items: center;
   justify-content: center;
   gap: 8px;
@@ -220,6 +221,9 @@ h3 {
   width: 30px;
 }
 .linkbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 0;
   background: transparent;
   padding: 0;

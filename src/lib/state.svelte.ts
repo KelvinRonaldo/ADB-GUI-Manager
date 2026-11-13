@@ -1,6 +1,6 @@
 import { api, listen } from './ipc';
 import { detectLang, lang, t } from './i18n.svelte';
-import { friendlyName, tcpAddress } from './format';
+import { friendlyName, tcpAddress, terminalSerial } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
 import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, Settings, Summary } from './types';
@@ -257,6 +257,7 @@ export async function refreshSummary(serial: string, quiet = true): Promise<void
     const s = await api.summary(serial, quiet);
     app.summaries[serial] = s;
     delete app.summaryErrors[serial];
+    if (tcpAddress(serial)) noteRecent(serial, s);
   } catch (e) {
     app.summaryErrors[serial] = String(e);
   }
@@ -383,10 +384,25 @@ export async function reconnect(serial: string): Promise<boolean> {
   return reconnectUsb(serial);
 }
 
-export function addRecent(address: string, name: string): void {
+/** Conectou: o endereço vai para o fim da lista (os que faltam conectar ficam em cima). */
+export function addRecent(address: string, name: string, serial?: string | null): void {
+  const old = app.settings.recentConnections.find((r) => r.address === address);
   const list = app.settings.recentConnections.filter((r) => r.address !== address);
-  list.unshift({ address, name, at: Date.now() });
-  app.settings.recentConnections = list.slice(0, 12);
+  list.push({ address, name, at: Date.now(), serial: serial ?? old?.serial });
+  app.settings.recentConnections = list.slice(-12);
+  saveSettings();
+}
+
+/** O resumo de um aparelho de rede chegou: guarda o serial e o nome na conexão recente. */
+function noteRecent(address: string, s: Summary): void {
+  const r = app.settings.recentConnections.find((x) => x.address === address);
+  if (!r) return;
+  const serial = terminalSerial(s.props) ?? undefined;
+  const dev = app.devices.find((d) => d.serial === address);
+  const name = dev ? friendlyName(dev, s) : r.name;
+  if (r.serial === serial && r.name === name) return;
+  r.serial = serial;
+  r.name = name;
   saveSettings();
 }
 

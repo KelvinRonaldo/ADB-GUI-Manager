@@ -199,12 +199,23 @@ pub struct RemoteList {
 }
 
 #[tauri::command]
-pub async fn remote_list(app: AppHandle, st: St<'_>, serial: String, path: String) -> Result<RemoteList, String> {
+pub async fn remote_list(
+    app: AppHandle,
+    st: St<'_>,
+    serial: String,
+    path: String,
+    run_as: Option<String>,
+) -> Result<RemoteList, String> {
     let dir = if path.ends_with('/') { path } else { format!("{}/", path) };
+    // Com run-as, o ls roda com o usuário do app (só apps debuggable) e enxerga /data/data/<pacote>.
+    let prefix = match run_as.as_deref().filter(|p| !p.is_empty()) {
+        Some(p) => format!("run-as {} ", parse::sh_quote(p)),
+        None => String::new(),
+    };
     let r = runner::run(
         &app,
         &st,
-        vec!["shell".into(), format!("ls -la {}", parse::sh_quote(&dir))],
+        vec!["shell".into(), format!("{}ls -la {}", prefix, parse::sh_quote(&dir))],
         RunOpts { serial: Some(serial), timeout_ms: Some(20_000), quiet: false },
     )
     .await?;

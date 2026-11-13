@@ -42,6 +42,11 @@
     btn?.focus();
   }
 
+  function details(serial: string) {
+    open = false;
+    openDetails(serial);
+  }
+
   function onWindowClick(e: MouseEvent) {
     if (open && !(e.target as HTMLElement).closest('.target-wrap')) open = false;
   }
@@ -83,13 +88,20 @@
         <ul class="menu" role="listbox" aria-labelledby="alvo-lbl">
           {#each app.devices as d (d.serial)}
             <li role="option" aria-selected={d.serial === app.settings.targetSerial}>
-              <button type="button" disabled={d.stateKind !== 'device'} onclick={() => pick(d.serial)}>
+              <button type="button" class="pick" disabled={d.stateKind !== 'device'} onclick={() => pick(d.serial)}>
                 <span class="dot" class:off={d.stateKind !== 'device'}></span>
                 <span class="name">{deviceName(d.serial)}</span>
                 <span class="chip {d.connection} mini">{t(`conn.${d.connection}`)}</span>
                 <span class="mono serial" title={t('top.adbId', { id: d.serial })}>{serialOf(d.serial) ?? d.serial}</span>
                 {#if d.stateKind !== 'device'}<span class="chip warn mini">{d.state}</span>{/if}
               </button>
+              <button
+                type="button"
+                class="info"
+                aria-label={t('top.details', { name: deviceName(d.serial) })}
+                title={t('top.details', { name: deviceName(d.serial) })}
+                onclick={() => details(d.serial)}><Icon name="info" size={16} /></button
+              >
             </li>
           {:else}
             <li class="none">{t('top.noDevices')}</li>
@@ -243,6 +255,11 @@
     border-radius: 10px;
     box-shadow: var(--shadow);
   }
+  .menu li {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
   .menu button {
     width: 100%;
     display: flex;
@@ -262,7 +279,17 @@
     opacity: 0.6;
     cursor: not-allowed;
   }
-  .menu [aria-selected='true'] button {
+  .menu button.info {
+    width: 34px;
+    flex: 0 0 34px;
+    justify-content: center;
+    padding: 9px 0;
+    color: var(--muted);
+  }
+  .menu button.info:hover {
+    color: var(--accent);
+  }
+  .menu [aria-selected='true'] button.pick {
     background: var(--accent-soft);
   }
   .none {

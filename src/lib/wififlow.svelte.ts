@@ -6,6 +6,7 @@
 import { api } from './ipc';
 import { classify, type AdbError } from './errors';
 import { t } from './i18n.svelte';
+import { terminalSerial } from './format';
 import { addRecent, app, deviceName, findDevice, saveSettings, setTarget } from './state.svelte';
 
 export type StepId = 'ip' | 'tcpip' | 'connect';
@@ -227,7 +228,7 @@ async function run(from: StepId): Promise<void> {
   if (!alive()) return;
   f.phase = 'done';
   f.status = '';
-  addRecent(address(), f.name);
+  addRecent(address(), f.name, terminalSerial(app.summaries[f.serial]?.props));
   const wasTarget = app.settings.targetSerial === f.serial || !findDevice(app.settings.targetSerial);
   if (wasTarget) setTarget(address());
   f.result = t('wifi.done', { name: f.name, address: address() }) + (wasTarget ? ' ' + t('wifi.doneTarget') : '');

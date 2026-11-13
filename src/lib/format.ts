@@ -43,11 +43,13 @@ export function friendlyName(d: Device | null | undefined, s?: Summary | null): 
 /**
  * Serial do terminal, que nem sempre é o que o adb mostra (o GPOS760 aparece no adb como
  * 100950089069061453 e tem serial 5901152448001549). Cada fabricante guarda num lugar;
- * sem nenhum, vale o ro.serialno.
+ * sem nenhum, vale o ro.serialno. O Verifone X990 só entrega o serial pelo SDK (serviço
+ * com.vfi.smartpos.deviceservice), fora do alcance do shell: nele fica o ID do adb.
  */
 export const SERIAL_PROPS = [
   'persist.sys.device.sn', // Gertec
   'persist.sys.SN', // Gertec
+  'persist.sys.customerSN', // Gertec GPOS720 (o ro.serialno é o do chip)
   'ro.sunmi.serial', // Sunmi
   'pax.sp.SN', // PAX
   'ro.fac.sn', // PAX

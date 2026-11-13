@@ -31,6 +31,8 @@ export type ErrorKind =
   | 'installFailed'
   | 'permissionDenied'
   | 'noSuchFile'
+  | 'notDebuggable'
+  | 'runAsUnknown'
   | 'readOnly'
   | 'notRoot'
   | 'unknownCommand'
@@ -139,6 +141,8 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   if (connectFailed) return make('connectFailed', ['retry', 'pairAgain']);
   if (installFailed) return make('installFailed', ['retry'], { code: 'Failure' });
   if (/adbd cannot run as root in production builds/.test(low)) return make('notRoot', []);
+  if (/run-as: package not debuggable|is not debuggable/.test(low)) return make('notDebuggable', []);
+  if (/run-as: unknown package/.test(low)) return make('runAsUnknown', ['retry']);
   if (/read-only file system/.test(low)) return make('readOnly', []);
   if (/permission denied/.test(low)) return make('permissionDenied', ['retry']);
   if (/no such file or directory|does not exist/.test(low)) return make('noSuchFile', ['retry']);

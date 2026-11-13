@@ -405,10 +405,20 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       ];
     case 'remote_list': {
       const id = nextId++;
-      const c = `adb -s ${a.serial} shell "ls -la ${a.path}"`;
+      const c = `adb -s ${a.serial} shell "${a.runAs ? `run-as ${a.runAs} ` : ''}ls -la ${a.path}"`;
       log(id, c, 'running');
       await wait(150);
       log(id, c, 'done', 0, 150);
+      if (a.runAs)
+        return {
+          entries: [
+            { name: 'cache', perms: 'drwxrws--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97_cache' },
+            { name: 'databases', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97' },
+            { name: 'files', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97' },
+            { name: 'shared_prefs', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:03', owner: 'u0_a97', group: 'u0_a97' },
+          ],
+          result: { id, cmd: c, code: 0, stdout: '', stderr: '', durationMs: 150, timedOut: false },
+        };
       return {
         entries: [
           { name: 'Aditum', perms: 'drwxrwx---', isDir: true, isLink: false, size: null, modified: '2026-11-10 09:12', owner: 'root', group: 'everybody' },

@@ -9,9 +9,9 @@
   import { classify, type AdbError } from '../lib/errors';
   import { formatBytes, formatDate } from '../lib/format';
   import { shQuote } from '../lib/shellwords';
-  import { app, confirmDialog, deviceName, navigate, promptDialog, targetSerial } from '../lib/state.svelte';
+  import { app, confirmDialog, deviceName, navigate, promptDialog, targetSerial, toast } from '../lib/state.svelte';
   import { reportError } from '../lib/actions';
-  import type { LocalEntry, RemoteEntry } from '../lib/types';
+  import type { LocalEntry, Package, RemoteEntry } from '../lib/types';
 
   let { active }: { active: boolean } = $props();
   const serial = $derived(targetSerial());
@@ -48,13 +48,39 @@
   let remoteError = $state<AdbError | null>(null);
   let remoteLoading = $state(false);
 
+  // Acessar como o app (run-as): enxerga /data/data/<pacote>. Vazio = shell do adb.
+  let runAs = $state('');
+  let apps = $state<Package[]>([]);
+  let appsLoading = $state(false);
+  /** Prefixo dos comandos de shell quando o acesso é como o app. */
+  const asPrefix = $derived(runAs ? `run-as ${shQuote(runAs)} ` : '');
+
+  async function loadApps() {
+    const s = serial;
+    if (!s || appsLoading) return;
+    appsLoading = true;
+    try {
+      const r = await api.packages(s, 'user');
+      apps = r.packages.sort((a, b) => a.name.localeCompare(b.name));
+    } catch {
+      apps = [];
+    } finally {
+      appsLoading = false;
+    }
+  }
+  function changeAs(pkg: string) {
+    runAs = pkg;
+    remote = [];
+    loadRemote(pkg ? `/data/data/${pkg}/` : '/sdcard/');
+  }
+
   const norm = (p: string) => (p.endsWith('/') ? p : p + '/');
   async function loadRemote(path = remotePath) {
     const s = serial;
     if (!s) return;
     remoteLoading = true;
     try {
-      const r = await api.remoteList(s, path);
+      const r = await api.remoteList(s, path, runAs || null);
       const err = classify(r.result);
       // ls devolve 1 quando alguma entrada não pode ser lida, mas lista o resto.
       if (err && !r.entries.length) {
@@ -81,7 +107,7 @@
     const v = await promptDialog(t('files.newFolder'), [{ label: t('files.newFolderName'), value: '' }]);
     const name = v?.[0]?.trim();
     if (!name || !serial) return;
-    const r = await api.run(['shell', `mkdir -p ${shQuote(remotePath + name)}`], { serial, timeoutMs: 20000 });
+    const r = await api.run(['shell', `${asPrefix}mkdir -p ${shQuote(remotePath + name)}`], { serial, timeoutMs: 20000 });
     const err = classify(r);
     if (err) return reportError(err, serial, newFolder);
     loadRemote();
@@ -91,7 +117,7 @@
     const names = [...remoteSel];
     const c = await confirmDialog({ title: t('confirm.deleteTitle'), text: t('confirm.deleteText', { names: names.join(', ') }), danger: true, destructive: true, confirmLabel: t('files.delete') });
     if (!c.ok) return;
-    const r = await api.run(['shell', `rm -rf ${names.map((n) => shQuote(remotePath + n)).join(' ')}`], { serial, timeoutMs: 60000 });
+    const r = await api.run(['shell', `${asPrefix}rm -rf ${names.map((n) => shQuote(remotePath + n)).join(' ')}`], { serial, timeoutMs: 60000 });
     const err = classify(r);
     if (err) return reportError(err, serial, del);
     loadRemote();
@@ -141,9 +167,83 @@
     }
   }
 
+  /** Transferência feita por comandos (sem barra de progresso do adb): como o app. */
+  async function runSteps(label: string, s: string, steps: () => Promise<{ ok: boolean; error: AdbError | null; out?: string }>) {
+    const tr: Transfer = { key: tkey++, pty: null, label, pct: 0, state: 'running', out: '', args: [], serial: s, error: null };
+    transfers.unshift(tr);
+    const cur = () => transfers.find((x) => x.key === tr.key);
+    try {
+      const r = await steps();
+      const c = cur();
+      if (!c) return;
+      if (r.ok) {
+        c.state = 'done';
+        c.pct = 100;
+        c.out = r.out ?? '';
+        loadRemote();
+        loadLocal();
+      } else {
+        c.state = 'failed';
+        c.error = r.error;
+      }
+    } catch (e) {
+      const c = cur();
+      if (c) {
+        c.state = 'failed';
+        c.error = classify(String(e));
+      }
+    }
+  }
+
+  /** Envia para dentro do app: push para /data/local/tmp e run-as cp (como o Android Studio). */
+  function pushAsApp(paths: string[], s: string) {
+    const pkg = runAs;
+    const dest = remotePath;
+    const dirs = local.filter((f) => f.isDir && paths.includes(f.path)).map((f) => f.name);
+    const files = paths.filter((p) => !local.some((f) => f.isDir && f.path === p));
+    if (dirs.length) toast(t('files.asDirSkipped', { names: dirs.join(', ') }), 'info');
+    if (!files.length) return;
+    const names = files.map((p) => p.split(/[\\/]/).pop() ?? p);
+    runSteps(`${names.join(', ')} → ${pkg}:${dest}`, s, async () => {
+      for (let i = 0; i < files.length; i++) {
+        const tmp = `/data/local/tmp/adbgui-${Date.now()}-${names[i]}`;
+        const up = await api.run(['push', files[i], tmp], { serial: s, timeoutMs: 600000 });
+        let err = classify(up);
+        if (err) return { ok: false, error: err };
+        const cp = await api.run(['shell', `run-as ${shQuote(pkg)} cp ${shQuote(tmp)} ${shQuote(dest + names[i])}; r=$?; rm -f ${shQuote(tmp)}; exit $r`], { serial: s, timeoutMs: 120000 });
+        err = classify(cp);
+        if (err) return { ok: false, error: err };
+      }
+      return { ok: true, error: null };
+    });
+  }
+
+  /** Baixa de dentro do app: exec-out run-as cat (arquivo) ou tar (pasta). */
+  function pullAsApp(s: string) {
+    const pkg = runAs;
+    const from = remotePath;
+    const to = localPath.replace(/[\\/]$/, '');
+    const picked = remote.filter((f) => remoteSel.has(f.name));
+    runSteps(`${picked.map((f) => f.name).join(', ')} ← ${pkg}:${from}`, s, async () => {
+      const notes: string[] = [];
+      for (const f of picked) {
+        const dir = f.isDir || f.isLink;
+        const cmd = dir
+          ? `run-as ${shQuote(pkg)} tar -cf - -C ${shQuote(from)} ${shQuote(f.name)}`
+          : `run-as ${shQuote(pkg)} cat ${shQuote(from + f.name)}`;
+        const r = await api.runToFile(['exec-out', cmd], s, to + sep + f.name + (dir ? '.tar' : ''));
+        const err = classify(r);
+        if (err) return { ok: false, error: err };
+        if (dir) notes.push(t('files.asPullDir', { name: f.name }));
+      }
+      return { ok: true, error: null, out: notes.join(' · ') };
+    });
+  }
+
   function push(paths = localSel.size ? [...localSel].map((n) => localPath.replace(/[\\/]$/, '') + sep + n) : []) {
     const s = serial;
     if (!s || !paths.length) return;
+    if (runAs) return pushAsApp(paths, s);
     const z = optZ ? ['-z', optZ] : [];
     const args = ['push', ...(optSync ? ['--sync'] : []), ...(optDry ? ['-n'] : []), ...z, ...paths, remotePath];
     start(args, `${paths.map((p) => p.split(/[\\/]/).pop()).join(', ')} → ${remotePath}`, s);
@@ -151,6 +251,7 @@
   function pull() {
     const s = serial;
     if (!s || !remoteSel.size) return;
+    if (runAs) return pullAsApp(s);
     const z = optZ ? ['-z', optZ] : [];
     const names = [...remoteSel];
     const args = ['pull', ...(optKeep ? ['-a'] : []), ...z, ...names.map((n) => remotePath + n), localPath];
@@ -198,6 +299,8 @@
   $effect(() => {
     if (active && serial && serial !== lastSerial) {
       lastSerial = serial;
+      runAs = '';
+      apps = [];
       loadRemote('/sdcard/');
     }
   });
@@ -259,6 +362,24 @@
             <div class="spacer"></div>
             <button type="button" class="linkbtn small" disabled={!serial} onclick={newFolder}>{t('files.newFolder')}</button>
             <button type="button" class="linkbtn small danger" disabled={!remoteSel.size} onclick={del}>{t('files.delete')}</button>
+          </div>
+          <div class="row nowrap as-row" data-guide="files-as">
+            <label class="muted small" for="files-as">{t('files.as')}</label>
+            <select
+              id="files-as"
+              class="select sm grow"
+              disabled={!serial}
+              value={runAs}
+              title={t('files.asHint')}
+              onfocus={() => !apps.length && loadApps()}
+              onpointerdown={() => !apps.length && loadApps()}
+              onchange={(e) => changeAs((e.currentTarget as HTMLSelectElement).value)}
+            >
+              <option value="">{t('files.asShell')}</option>
+              {#if runAs && !apps.some((a) => a.name === runAs)}<option value={runAs}>{t('files.asApp', { pkg: runAs })}</option>{/if}
+              {#if appsLoading && !apps.length}<option disabled>{t('files.asLoading')}</option>{/if}
+              {#each apps as a (a.name)}<option value={a.name}>{t('files.asApp', { pkg: a.name })}</option>{/each}
+            </select>
           </div>
           <div class="row nowrap">
             <button type="button" class="btn sm icon" aria-label={t('files.up')} title={t('files.up')} onclick={remoteUp}><Icon name="arrowUp" size={14} /></button>
@@ -347,6 +468,9 @@
 </div>
 
 <style>
+  .as-row label {
+    flex: 0 0 auto;
+  }
   .panes {
     display: grid;
     grid-template-columns: minmax(0, 1fr);

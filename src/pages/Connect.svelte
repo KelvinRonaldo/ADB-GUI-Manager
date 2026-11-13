@@ -312,7 +312,7 @@
               <div class="li">
                 <div class="grow">
                   <div class="strong">{r.name}</div>
-                  <div class="mono muted small">{r.address} · {formatDate(r.at, lang.current)}</div>
+                  <div class="mono muted small">{#if r.serial}{t('connect.recentSerial', { serial: r.serial })} · {/if}{r.address} · {formatDate(r.at, lang.current)}</div>
                 </div>
                 <button type="button" class="btn sm" disabled={busy} onclick={() => doIp(r.address)}>{t('common.connect')}</button>
                 <button type="button" class="btn sm icon ghost" aria-label={t('connect.forgetLabel')} title={t('connect.forgetLabel')} onclick={() => forget(r.address)}><Icon name="close" size={14} /></button>
