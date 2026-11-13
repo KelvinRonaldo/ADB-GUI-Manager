@@ -21,6 +21,8 @@ pub struct AppState {
     pub settings_path: PathBuf,
     pub history_path: PathBuf,
     pub data_dir: PathBuf,
+    /// Pasta de trabalho dos processos do adb (a pasta do usuário), fora da pasta do app.
+    pub work_dir: PathBuf,
     pub history: Mutex<VecDeque<LogEntry>>,
     pub next_id: AtomicU64,
     pub streams: Mutex<HashMap<u64, oneshot::Sender<()>>>,

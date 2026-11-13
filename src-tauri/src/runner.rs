@@ -40,8 +40,21 @@ pub fn tokio_command(st: &AppState, path: &str, args: &[String]) -> tokio::proce
     }
     cmd.stdin(std::process::Stdio::null());
     cmd.kill_on_drop(true);
+    // Fora da pasta do app: um adb que sobre (app morto à força, desinstalação com o app
+    // aberto) não prende a pasta de instalação nem a montagem do AppImage.
+    cmd.current_dir(&st.work_dir);
     #[cfg(windows)]
     cmd.creation_flags(0x0800_0000);
+    // Linux: o adb morre junto com o app, mesmo se o app for morto à força. O servidor do adb
+    // não é afetado: ele nasce de um fork do cliente, e o fork zera esse sinal.
+    #[cfg(target_os = "linux")]
+    // SAFETY: prctl é async-signal-safe; nada mais roda entre o fork e o exec.
+    unsafe {
+        cmd.pre_exec(|| {
+            libc::prctl(libc::PR_SET_PDEATHSIG, libc::SIGKILL);
+            Ok(())
+        });
+    }
     cmd
 }
 
