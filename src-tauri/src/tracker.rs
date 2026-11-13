@@ -42,10 +42,15 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                     continue;
                 }
             };
+            st.tracker_live.store(true, Ordering::SeqCst);
             let _ = app.emit("server", serde_json::json!({ "running": true }));
             let mut out = match child.stdout.take() {
                 Some(o) => o,
-                None => continue,
+                None => {
+                    let _ = child.kill().await;
+                    st.tracker_live.store(false, Ordering::SeqCst);
+                    continue;
+                }
             };
             let mut acc: Vec<u8> = Vec::new();
             let mut first = true;
@@ -74,6 +79,7 @@ pub fn spawn(app: AppHandle, st: Arc<AppState>) {
                 }
             }
             let _ = child.kill().await;
+            st.tracker_live.store(false, Ordering::SeqCst);
             if let Ok(mut d) = st.devices.lock() {
                 d.clear();
             }
