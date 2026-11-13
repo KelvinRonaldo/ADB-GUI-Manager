@@ -36,6 +36,7 @@ pub fn open(app: AppHandle, st: Arc<AppState>, args: Vec<String>, serial: Option
         .map_err(|e| format!("PTY_FAILED: {}", e))?;
     let mut builder = CommandBuilder::new(&path);
     builder.args(&args);
+    builder.cwd(&st.work_dir);
     for (k, v) in st.settings().env_pairs() {
         builder.env(k, v);
     }

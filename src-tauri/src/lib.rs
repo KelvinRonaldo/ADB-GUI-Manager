@@ -69,6 +69,7 @@ pub fn run() {
             let cli = cli_adb();
             let downloaded = data_dir.join("platform-tools").join(locate::ADB_EXE);
             let found = locate::locate(cli.as_deref(), &settings.adb_mode, &settings.adb_path, &downloaded);
+            let work_dir = app.path().home_dir().ok().filter(|p| p.is_dir()).unwrap_or_else(|| data_dir.clone());
             let state = Arc::new(AppState {
                 adb: RwLock::new(found.info),
                 checked: Mutex::new(found.checked),
@@ -76,6 +77,7 @@ pub fn run() {
                 settings_path,
                 history_path,
                 data_dir,
+                work_dir,
                 history: Mutex::new(history),
                 next_id: AtomicU64::new(first_id),
                 streams: Mutex::new(HashMap::new()),
