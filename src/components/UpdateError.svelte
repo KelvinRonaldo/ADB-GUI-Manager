@@ -31,7 +31,7 @@
       <button type="button" class="btn sm" onclick={openAppFolder}>{t('update.act.openFolder')}</button>
     {/if}
     {#if error.kind !== 'network' && error.kind !== 'interrupted' && error.kind !== 'notFinished'}
-      <button type="button" class="btn sm outline" onclick={openReleases}>{t('update.act.openRelease')} ↗</button>
+      <button type="button" class="btn sm outline" onclick={openReleases}>{t('update.act.openRelease')}<Icon name="external" size={14} /></button>
     {/if}
     <button type="button" class="btn sm ghost" aria-expanded={showRaw} onclick={() => (showRaw = !showRaw)}>{t('update.act.details')}</button>
   </div>

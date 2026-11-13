@@ -33,7 +33,7 @@
     {#if notes.length}
       <ul class="notes">{#each notes as n, i (i)}<li>{n}</li>{/each}</ul>
     {/if}
-    <button type="button" class="btn sm ghost link" onclick={openReleases}>{t('update.fullRelease')} ↗</button>
+    <button type="button" class="btn sm ghost link" onclick={openReleases}>{t('update.fullRelease')}<Icon name="external" size={14} /></button>
   {:else if upd.phase === 'downloading' || upd.phase === 'installing'}
     <div class="progress-grid">
       <ol class="steps">
@@ -84,7 +84,7 @@
         <div>
           <div class="h">{t('update.whatsNew')}</div>
           <ul class="notes">{#each notes as n, i (i)}<li>{n}</li>{/each}</ul>
-          <button type="button" class="btn sm ghost link" onclick={openReleases}>{t('update.fullRelease')} ↗</button>
+          <button type="button" class="btn sm ghost link" onclick={openReleases}>{t('update.fullRelease')}<Icon name="external" size={14} /></button>
         </div>
       {/if}
     {/if}

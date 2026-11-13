@@ -160,7 +160,7 @@
         </div>
         {#if mode === 'custom'}
           {#if checking}<div class="indent muted small">{t('settings.validating')}</div>
-          {:else if valid}<div class="indent note ok"><strong>{t('first.valid')}</strong> adb {valid.adbVersion}{valid.toolsVersion ? ` · ${valid.toolsVersion}` : ''}</div>
+          {:else if valid}<div class="indent note ok"><strong><Icon name="check" size={13} /> {t('first.valid')}</strong> adb {valid.adbVersion}{valid.toolsVersion ? ` · ${valid.toolsVersion}` : ''}</div>
           {:else if invalid}<div class="indent note bad">{t(`first.invalid.${['empty', 'notFound', 'isDirectory', 'notExecutable', 'notAdb'].includes(invalid) ? invalid : 'notAdb'}` as never)}</div>{/if}
         {/if}
         <label class="check"><input type="radio" name="mode" value="downloaded" bind:group={mode} disabled={!downloadedExists} /> {t('settings.mode.downloaded')}</label>
@@ -351,7 +351,7 @@
             <strong class="small-h">{t('update.title')}</strong>
             {#if upd.info && !upd.info.canUpdate}
               <div class="muted small">{t('update.unsupported')}</div>
-              <div class="row"><button type="button" class="btn sm outline" onclick={openReleases}>{t('update.act.openRelease')} ↗</button></div>
+              <div class="row"><button type="button" class="btn sm outline" onclick={openReleases}>{t('update.act.openRelease')}<Icon name="external" size={14} /></button></div>
             {:else if upd.phase === 'checking'}
               <div class="line accent"><span class="spin"><Icon name="spinner" size={14} /></span>{t('update.checking')}</div>
               <div class="row"><button type="button" class="btn primary" disabled><Icon name="refresh" size={16} />{t('update.checkingBtn')}</button></div>

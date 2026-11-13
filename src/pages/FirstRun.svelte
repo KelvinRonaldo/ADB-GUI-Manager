@@ -96,7 +96,7 @@
         <div class="section-title">{t('first.checked')}</div>
         {#each checked as c, i (i)}
           <div class="lrow">
-            <span class="x">✗</span>
+            <span class="x"><Icon name="close" size={13} /></span>
             <span class="src">{t(`first.src.${c.source}` as Key)}</span>
             <span class="mono p">{c.path}</span>
           </div>
@@ -117,7 +117,7 @@
           {#if checking}
             <span class="note muted">{t('settings.validating')}</span>
           {:else if valid}
-            <span class="note ok"><strong>{t('first.valid')}</strong> <span class="mono">Android Debug Bridge version {valid.adbVersion}{valid.toolsVersion ? ` · Version ${valid.toolsVersion}` : ''}</span></span>
+            <span class="note ok"><strong><Icon name="check" size={13} /> {t('first.valid')}</strong> <span class="mono">Android Debug Bridge version {valid.adbVersion}{valid.toolsVersion ? ` · Version ${valid.toolsVersion}` : ''}</span></span>
           {:else if invalid}
             <span class="note bad">{t(`first.invalid.${invalid}` as Key)}</span>
           {/if}

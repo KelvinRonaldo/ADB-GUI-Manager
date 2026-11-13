@@ -26,6 +26,9 @@ futures-util = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
 tauri-plugin-updater = "2"
 
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
 [features]
 # Versão portátil: dados, configurações e o perfil do WebView2 numa pasta ao lado do
 # executável (adb-gui-manager-data), nada no perfil do usuário.

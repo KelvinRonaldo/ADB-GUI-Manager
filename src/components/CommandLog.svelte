@@ -56,11 +56,11 @@
           {#if e.state === 'running'}
             <span class="code run"><Icon name="spinner" size={12} class="spin" /> {t('log.running')}</span>
           {:else if e.code === 0}
-            <span class="code ok">✓ 0</span>
+            <span class="code ok"><Icon name="check" size={12} /> 0</span>
           {:else if e.code === 130 && !e.error}
-            <span class="code stopped">■ {t('log.stopped')}</span>
+            <span class="code stopped"><Icon name="stop" size={12} /> {t('log.stopped')}</span>
           {:else}
-            <span class="code bad" title={e.error ?? ''}>✗ {e.code}{e.error ? ` ${e.error}` : ''}</span>
+            <span class="code bad" title={e.error ?? ''}><Icon name="close" size={12} /> {e.code}{e.error ? ` ${e.error}` : ''}</span>
           {/if}
           <span class="ms">{e.durationMs != null ? `${e.durationMs} ms` : ''}</span>
         </div>
