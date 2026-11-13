@@ -38,6 +38,8 @@ let DEVICES: Device[] = [
 const NEW_USB: Device = { serial: 'NEWUSB01', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-6', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '11' };
 const NEW_IP = '192.168.0.77';
 let failConnect = false;
+let updateCanceled = false;
+const MOCK_NOTES = '- Atualização dentro do app, pelas Releases do GitHub\n- Correção: a versão no Sobre mostrava 0.1.0';
 if (typeof window !== 'undefined') {
   (window as unknown as Record<string, unknown>).__mockPlugUsb = (fail = false) => {
     failConnect = fail;
@@ -441,6 +443,53 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       emit('download', { received: 7500000, total: 7500000, phase: 'extract' });
       await wait(300);
       return '/home/usuario/.local/share/br.com.kelvinronaldo.adbguimanager/platform-tools/adb';
+    // Atualização do app. ?update=none|neterr|interrupt|sig|perm, ?pkg=deb|portable|dev,
+    // ?updated (acabou de reabrir na versão nova), ?notfinished.
+    case 'update_info': {
+      const pkg = params.get('pkg') ?? 'appimage';
+      return {
+        version: params.has('updated') ? '0.3.0' : '0.2.1',
+        package: pkg,
+        location: pkg === 'portable' ? 'C:\\Ferramentas\\ADB-GUI-Manager\\adb-gui-manager.exe' : pkg === 'deb' ? '/usr/bin/adb-gui-manager' : '/home/usuario/Aplicativos/ADB-GUI-Manager.AppImage',
+        canUpdate: pkg !== 'dev',
+        lastInstall: params.has('updated')
+          ? { result: 'updated', from: '0.2.1', to: '0.3.0', notes: MOCK_NOTES }
+          : params.has('notfinished')
+            ? { result: 'notFinished', from: '0.2.1', to: '0.3.0', notes: MOCK_NOTES }
+            : null,
+      };
+    }
+    case 'update_check': {
+      await wait(900);
+      const u = params.get('update');
+      if (u === 'neterr') throw new Error('UPDATE_NETWORK: error sending request for url (https://github.com/…/latest.json): connection timed out');
+      if (u === 'none') return { available: false, current: '0.2.1', downloaded: false, openSessions: 0 };
+      return { available: true, current: '0.2.1', version: '0.3.0', notes: MOCK_NOTES, date: '2026-11-13T12:00:00Z', size: 86_000_000, downloaded: false, openSessions: 2 };
+    }
+    case 'update_download': {
+      updateCanceled = false;
+      const total = 86_000_000;
+      const u = params.get('update');
+      for (let i = 1; i <= 20; i++) {
+        await wait(200);
+        if (updateCanceled) throw new Error('UPDATE_CANCELED');
+        if (u === 'interrupt' && i === 8) throw new Error('UPDATE_INTERRUPTED: connection reset by peer');
+        emit('update-progress', { received: (total * i) / 20, total, bytesPerSec: 6_500_000 });
+      }
+      if (u === 'sig') throw new Error('UPDATE_SIGNATURE: the signature does not match');
+      return null;
+    }
+    case 'update_cancel':
+      updateCanceled = true;
+      return null;
+    case 'update_install': {
+      await wait(1800);
+      if (params.get('update') === 'perm') throw new Error('UPDATE_PERMISSION: Permission denied (os error 13)');
+      // "Reabre" o app na versão nova.
+      location.search = '?updated';
+      await wait(10_000);
+      return null;
+    }
     case 'server_status':
       return true;
     case 'server_start':

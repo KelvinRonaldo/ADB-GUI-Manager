@@ -10,6 +10,16 @@
   import { formatBytes } from '../lib/format';
   import { adbChanged, app, applyTheme, checkServer, confirmDialog, restartServer, saveSettings, setLanguage, startTour, toast } from '../lib/state.svelte';
   import type { AdbVersion, Settings, Theme } from '../lib/types';
+  import UpdateError from '../components/UpdateError.svelte';
+  import { checkUpdates, openReleases, packageLabel, upd, whenText } from '../lib/update.svelte';
+
+  const lastCheckText = $derived.by(() => {
+    const lc = app.settings.updateLastCheck;
+    if (!lc) return t('update.never');
+    const when = whenText(lc.at);
+    return lc.found ? t('update.lastCheckFound', { when, v: lc.found }) : t('update.lastCheckNone', { when });
+  });
+  const dlPct = $derived(upd.progress?.total ? `${Math.round((upd.progress.received / upd.progress.total) * 100)}%` : '');
 
   let mode = $state<Settings['adbMode']>(app.settings.adbMode);
   let path = $state(app.settings.adbPath || (app.adb?.source === 'custom' ? app.adb.path : ''));
@@ -319,15 +329,60 @@
         </div>
       </section>
 
-      <section class="card sec">
-        <h2>{t('settings.about')}</h2>
-        <div>ADB GUI Manager · {t('settings.version', { v: '0.1.0' })}</div>
-        <div class="mono muted small">br.com.kelvinronaldo.adbguimanager</div>
-        <div class="field">
-          <span>{t('settings.dataDir')}</span>
-          <div class="row nowrap">
-            <span class="mono small grow path">{app.init?.dataDir}</span>
-            <button type="button" class="btn sm" onclick={() => app.init && revealInFolder(app.init.dataDir)}>{t('settings.openDataDir')}</button>
+      <section class="card sec wide" data-guide="settings-update">
+        <h2>{t('settings.aboutUpdates')}</h2>
+        <div class="about">
+          <div class="col">
+            <div class="ver"><strong>ADB GUI Manager</strong> · {t('settings.version', { v: upd.info?.version ?? '…' })}</div>
+            <div class="mono muted small">br.com.kelvinronaldo.adbguimanager</div>
+            <dl class="facts">
+              <dt>{t('update.package')}</dt>
+              <dd>{packageLabel(upd.info?.package)}</dd>
+              {#if upd.info?.location}
+                <dt>{t('update.location')}</dt>
+                <dd class="mono small path">{upd.info.location}</dd>
+              {/if}
+              <dt>{t('settings.dataDir')}</dt>
+              <dd class="mono small path">{app.init?.dataDir}</dd>
+            </dl>
+            <div class="row"><button type="button" class="btn sm" onclick={() => app.init && revealInFolder(app.init.dataDir)}>{t('settings.openDataDir')}</button></div>
+          </div>
+          <div class="col upd" aria-live="polite">
+            <strong class="small-h">{t('update.title')}</strong>
+            {#if upd.info && !upd.info.canUpdate}
+              <div class="muted small">{t('update.unsupported')}</div>
+              <div class="row"><button type="button" class="btn sm outline" onclick={openReleases}>{t('update.act.openRelease')} ↗</button></div>
+            {:else if upd.phase === 'checking'}
+              <div class="line accent"><span class="spin"><Icon name="spinner" size={14} /></span>{t('update.checking')}</div>
+              <div class="row"><button type="button" class="btn primary" disabled><Icon name="refresh" size={16} />{t('update.checkingBtn')}</button></div>
+            {:else if upd.phase === 'uptodate'}
+              <div class="line ok"><Icon name="check" size={14} />{t('update.upToDate', { v: upd.info?.version ?? '' })}</div>
+              <div class="row"><button type="button" class="btn outline" onclick={checkUpdates}><Icon name="refresh" size={16} />{t('update.checkAgain')}</button></div>
+            {:else if upd.phase === 'available'}
+              <div class="line accent strong"><Icon name="download" size={14} />{t('update.available', { v: upd.check?.version ?? '' })}</div>
+              <div class="row"><button type="button" class="btn primary" onclick={() => (upd.dialog = true)}><Icon name="download" size={16} />{upd.check?.downloaded ? t('update.installReopen') : t('update.downloadInstall')}</button></div>
+            {:else if upd.phase === 'downloading'}
+              <div class="line accent"><span class="spin"><Icon name="spinner" size={14} /></span>{t('update.downloadingShort', { v: upd.check?.version ?? '', pct: dlPct })}</div>
+              <div class="minibar"><div style="width: {upd.progress?.total ? Math.round((upd.progress.received / upd.progress.total) * 100) : 8}%"></div></div>
+              <div class="row"><button type="button" class="btn sm" onclick={() => (upd.dialog = true)}>{t('update.seeProgress')}</button></div>
+            {:else if upd.phase === 'installing'}
+              <div class="line accent"><span class="spin"><Icon name="spinner" size={14} /></span>{t('update.installingShort', { v: upd.check?.version ?? '' })}</div>
+            {:else if upd.phase === 'updated' && upd.updated}
+              <div class="line ok"><Icon name="check" size={14} />{t('update.updatedLine', { from: upd.updated.from, to: upd.updated.to })}</div>
+              <div class="row">
+                <button type="button" class="btn outline" onclick={checkUpdates}><Icon name="refresh" size={16} />{t('update.checkBtn')}</button>
+                <button type="button" class="btn ghost" onclick={() => (upd.dialog = true)}>{t('update.seeNotes')}</button>
+              </div>
+            {:else if upd.phase === 'error' && upd.error}
+              <UpdateError error={upd.error} />
+              {#if !['notFinished', 'interrupted', 'network', 'generic'].includes(upd.error.kind)}
+                <div class="row"><button type="button" class="btn sm outline" onclick={checkUpdates}><Icon name="refresh" size={14} />{t('update.checkAgain')}</button></div>
+              {/if}
+            {:else}
+              <div class="muted small">{lastCheckText}</div>
+              <div class="row"><button type="button" class="btn primary" onclick={checkUpdates}><Icon name="refresh" size={16} />{t('update.checkBtn')}</button></div>
+            {/if}
+            <div class="muted small foot">{t('update.footnote')}</div>
           </div>
         </div>
       </section>
@@ -416,5 +471,72 @@
   }
   .path {
     word-break: break-all;
+  }
+  .wide {
+    grid-column: 1 / -1;
+  }
+  .about {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .about .col {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    font-size: 13px;
+  }
+  .ver {
+    font-size: 14px;
+  }
+  .facts {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    row-gap: 6px;
+  }
+  .facts dt {
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 0;
+    min-width: 0;
+  }
+  .upd {
+    padding-left: 18px;
+    border-left: 1px solid var(--border);
+  }
+  .small-h {
+    font-size: 13px;
+  }
+  .line {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-height: 20px;
+  }
+  .line.accent {
+    color: var(--accent);
+  }
+  .line.ok {
+    color: var(--ok-fg);
+    font-weight: 600;
+  }
+  .line.strong {
+    font-weight: 600;
+  }
+  .minibar {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .minibar > div {
+    height: 100%;
+    background: var(--accent);
+  }
+  .foot {
+    line-height: 18px;
   }
 </style>

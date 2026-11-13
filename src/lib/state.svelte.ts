@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wifiPort: 5555,
   usbToWifiSkip: [],
   devicesView: 'grid',
+  updateLastCheck: null,
 };
 
 export interface Toast {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { upd } from '../lib/update.svelte';
   import Icon from './Icon.svelte';
   import { t } from '../lib/i18n.svelte';
   import { app, confirmDialog, navigate, restartServer, checkServer, toast } from '../lib/state.svelte';
@@ -77,7 +78,7 @@
     <div class="logo"><Icon name="terminalApp" size={20} stroke={2.2} /></div>
     <div>
       <div class="name">ADB GUI Manager</div>
-      <div class="ver">v0.1.0</div>
+      {#if upd.info}<div class="ver">v{upd.info.version}</div>{/if}
     </div>
   </div>
 

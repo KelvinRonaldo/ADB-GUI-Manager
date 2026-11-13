@@ -1,6 +1,6 @@
 [package]
 name = "adb-gui-manager"
-version = "0.2.1"
+version = "0.3.0"
 description = "Interface gráfica para o adb"
 authors = ["Kelvin Ronaldo"]
 edition = "2021"
@@ -24,6 +24,7 @@ portable-pty = "0.8"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream"] }
 futures-util = "0.3"
 zip = { version = "2", default-features = false, features = ["deflate"] }
+tauri-plugin-updater = "2"
 
 [features]
 # Versão portátil: dados, configurações e o perfil do WebView2 numa pasta ao lado do

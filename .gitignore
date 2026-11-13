@@ -8,3 +8,4 @@ src-tauri/gen/schemas/
 .vscode/
 .idea/
 dist-windows/
+dist-release/

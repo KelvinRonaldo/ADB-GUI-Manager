@@ -9,6 +9,7 @@ mod settings;
 mod state;
 mod stream;
 mod tracker;
+mod update;
 
 use state::AppState;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -45,6 +46,8 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .manage(update::UpdateState::default())
         .setup(|app| {
             #[cfg(feature = "portable")]
             let portable = portable_base();
@@ -113,6 +116,11 @@ pub fn run() {
             commands::local_roots,
             commands::write_text_file,
             commands::platform_tools_download,
+            commands::update_info,
+            commands::update_check,
+            commands::update_download,
+            commands::update_cancel,
+            commands::update_install,
             commands::server_status,
             commands::server_start,
             commands::server_stop,

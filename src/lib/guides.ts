@@ -29,7 +29,7 @@ export const PAGE_GUIDES: Record<Page, GuideStep[]> = {
   shell: steps('shell', ['shell-tabs', 'shell-term', 'shell-saved-toggle']),
   logcat: steps('logcat', ['logcat-filters', 'logcat-lines', 'logcat-actions']),
   commands: steps('commands', ['commands-free', 'commands-catalog', 'commands-form', 'commands-output']),
-  settings: steps('settings', ['settings-adb', 'settings-server', 'settings-env', 'settings-guides']),
+  settings: steps('settings', ['settings-adb', 'settings-server', 'settings-env', 'settings-guides', 'settings-update']),
 };
 
 export const titleKey = (s: GuideStep) => `${s.key}.t` as Key;
