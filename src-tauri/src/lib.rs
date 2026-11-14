@@ -47,6 +47,9 @@ fn portable_base() -> Option<std::path::PathBuf> {
 
 pub fn run() {
     let app = tauri::Builder::default()
+        // Abrir o app de novo (atalho, Menu Iniciar) traz a janela já aberta, inclusive da bandeja,
+        // em vez de criar uma segunda cópia com outra bandeja e outro track-devices.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main(app)))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
