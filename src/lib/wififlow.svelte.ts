@@ -7,7 +7,7 @@ import { api } from './ipc';
 import { classify, type AdbError } from './errors';
 import { t } from './i18n.svelte';
 import { terminalSerial } from './format';
-import { addRecent, app, deviceName, findDevice, saveSettings, setTarget } from './state.svelte';
+import { addRecent, app, deviceName, findDevice, saveSettings, setTarget, wifiTwin } from './state.svelte';
 
 export type StepId = 'ip' | 'tcpip' | 'connect';
 export type StepState = 'pending' | 'running' | 'done' | 'error' | 'skipped';
@@ -81,6 +81,8 @@ export function onUsbReady(serial: string): void {
   const last = handled.get(serial);
   if (last && Date.now() - last < HOLD_MS) return;
   if (flow.current?.serial === serial || flow.queue.some((q) => q.serial === serial)) return;
+  // Já está no Wi-Fi (o USB só voltou, ex.: de "não autorizado" para pronto): nada a fazer.
+  if (wifiTwin(serial)) return;
   startWifiFlow(serial, { auto: mode === 'auto', ask: mode === 'ask' });
 }
 

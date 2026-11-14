@@ -301,6 +301,13 @@ export function usbTwin(serial: string): string | null {
   return u?.serial ?? null;
 }
 
+/** A entrada Wi-Fi pronta do mesmo aparelho de uma entrada USB, se houver. */
+export function wifiTwin(usbSerial: string): string | null {
+  const mine = identities(usbSerial, true);
+  const w = app.devices.find((x) => x.connection === 'wifi' && x.stateKind === 'device' && identities(x.serial, false).some((id) => mine.includes(id)));
+  return w?.serial ?? null;
+}
+
 /** Aparelhos da listagem (página Aparelhos, contador da barra lateral e escolha do alvo). */
 export function listedDevices(): Device[] {
   return app.devices.filter((d) => !hiddenByUsb(d.serial));

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { app, hiddenByUsb, listedDevices, usbTwin } from './state.svelte';
+import { app, hiddenByUsb, listedDevices, usbTwin, wifiTwin } from './state.svelte';
 import type { Device, Summary } from './types';
 
 const dev = (serial: string, connection: Device['connection'], stateKind: Device['stateKind'] = 'device'): Device =>
@@ -45,5 +45,15 @@ describe('Wi-Fi do mesmo aparelho ligado por USB', () => {
     app.devices = [dev('4AF508088', 'usb'), dev('192.168.207.60:5555', 'wifi')];
     app.summaries['192.168.207.60:5555'] = sum({ 'ro.serialno': '4AF508088' });
     expect(hiddenByUsb('4AF508088')).toBe(false);
+  });
+
+  it('acha o Wi-Fi pronto do mesmo aparelho a partir do USB (para não abrir o "Passar para Wi-Fi")', () => {
+    app.devices = [dev('4AF508088', 'usb'), dev('192.168.207.60:5555', 'wifi')];
+    app.summaries['192.168.207.60:5555'] = sum({ 'ro.serialno': '4AF508088' });
+    expect(wifiTwin('4AF508088')).toBe('192.168.207.60:5555');
+    app.devices = [dev('4AF508088', 'usb'), dev('192.168.207.60:5555', 'wifi', 'offline')];
+    expect(wifiTwin('4AF508088')).toBeNull();
+    app.devices = [dev('PB1SP39E70207', 'usb'), dev('192.168.207.60:5555', 'wifi')];
+    expect(wifiTwin('PB1SP39E70207')).toBeNull();
   });
 });
