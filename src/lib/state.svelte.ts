@@ -1,6 +1,6 @@
-import { api, listen } from './ipc';
+import { api, isTauri, listen } from './ipc';
 import { detectLang, lang, t } from './i18n.svelte';
-import { friendlyName, tcpAddress } from './format';
+import { friendlyName, tcpAddress, terminalSerial } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
 import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, Settings, Summary } from './types';
@@ -16,6 +16,9 @@ export const DEFAULT_SETTINGS: Settings = {
   env: {},
   keepHistory: true,
   theme: 'system',
+  lightTheme: 'classic',
+  darkTheme: 'classic',
+  closeToTray: false,
   language: '',
   summaryRefreshSec: 60,
   confirmDestructive: true,
@@ -37,6 +40,10 @@ export const DEFAULT_SETTINGS: Settings = {
   wifiPort: 5555,
   usbToWifiSkip: [],
   devicesView: 'grid',
+  mirrorQuality: 'medium',
+  mirrorFps: 30,
+  mirrorControl: true,
+  mirrorStayAwake: true,
   updateLastCheck: null,
 };
 
@@ -119,10 +126,51 @@ export function saveSettings(): void {
   }, 300);
 }
 
-export function applyTheme(): void {
+/** Só a janela principal avisa as outras quando o tema muda. */
+const isMainWindow = typeof location === 'undefined' || !new URLSearchParams(location.search).has('window');
+
+export function applyTheme(broadcast = isTauri && isMainWindow): void {
   const s = app.settings.theme;
   const dark = s === 'dark' || (s === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const root = document.documentElement;
+  root.dataset.theme = dark ? 'dark' : 'light';
+  root.dataset.palette = (dark ? app.settings.darkTheme : app.settings.lightTheme) || 'classic';
+  // Barra de título da janela (Windows) no mesmo modo do app. A janela destacada do espelho tem
+  // conteúdo escuro nos dois temas: nasce com a barra escura e não muda (no Windows o setTheme
+  // numa janela criada em tempo de execução só pegava na criação).
+  if (isTauri && isMainWindow) {
+    import('@tauri-apps/api/window')
+      .then(async ({ getCurrentWindow }) => {
+        const w = getCurrentWindow();
+        await w.setTheme(s === 'system' ? null : dark ? 'dark' : 'light');
+        await repaintTitleBar(w);
+      })
+      .catch(() => {});
+  }
+  if (broadcast) {
+    // A janela destacada do espelho acompanha o tema da principal.
+    import('@tauri-apps/api/event')
+      .then(({ emit }) => emit('app-theme', { theme: s, lightTheme: app.settings.lightTheme, darkTheme: app.settings.darkTheme }))
+      .catch(() => {});
+  }
+}
+
+/**
+ * O Windows só redesenha a barra de título no próximo redimensionamento: sem isso ela
+ * fica no modo antigo até mexer na janela. Um pixel a mais e de volta força o redesenho.
+ */
+async function repaintTitleBar(w: import('@tauri-apps/api/window').Window): Promise<void> {
+  if (app.init?.os !== 'windows') return;
+  if ((await w.isMaximized()) || (await w.isFullscreen()) || (await w.isMinimized())) return;
+  const { PhysicalSize } = await import('@tauri-apps/api/dpi');
+  const size = await w.innerSize();
+  await w.setSize(new PhysicalSize(size.width + 1, size.height));
+  await w.setSize(new PhysicalSize(size.width, size.height));
+  // Com escala fracionária (125%, 150%) a volta arredonda e a janela crescia 1 px a cada troca.
+  const after = await w.innerSize();
+  const dw = after.width - size.width;
+  const dh = after.height - size.height;
+  if (dw || dh) await w.setSize(new PhysicalSize(size.width - dw, size.height - dh));
 }
 
 export function setLanguage(l: Settings['language']): void {
@@ -227,6 +275,44 @@ export function readyDevices(): Device[] {
   return app.devices.filter((d) => d.stateKind === 'device');
 }
 
+/** Os seriais que identificam o aparelho físico: o do adb (no USB) e os lidos das propriedades. */
+function identities(serial: string, viaUsb: boolean): string[] {
+  const props = app.summaries[serial]?.props;
+  const ids = [terminalSerial(props), props?.['ro.serialno'], props?.['ro.boot.serialno']];
+  if (viaUsb) ids.push(serial);
+  return ids.map((v) => (v ?? '').trim()).filter((v) => v && !/^(unknown|null|none)$/i.test(v) && !/^0+$/.test(v));
+}
+
+/**
+ * Entrada Wi-Fi de um aparelho que também está pronto pelo USB: fica fora da listagem até o cabo
+ * sair (pedido do Kelvin, 14/11). Vale também para o Wi-Fi que caiu e aguarda reconexão.
+ */
+export function hiddenByUsb(serial: string): boolean {
+  return usbTwin(serial) !== null;
+}
+
+/** A entrada USB pronta do mesmo aparelho de uma entrada Wi-Fi, se houver. */
+export function usbTwin(serial: string): string | null {
+  const d = findDevice(serial);
+  if (d && d.connection !== 'wifi') return null;
+  const mine = identities(serial, false);
+  if (!mine.length) return null;
+  const u = app.devices.find((x) => x.connection === 'usb' && x.stateKind === 'device' && identities(x.serial, true).some((id) => mine.includes(id)));
+  return u?.serial ?? null;
+}
+
+/** A entrada Wi-Fi pronta do mesmo aparelho de uma entrada USB, se houver. */
+export function wifiTwin(usbSerial: string): string | null {
+  const mine = identities(usbSerial, true);
+  const w = app.devices.find((x) => x.connection === 'wifi' && x.stateKind === 'device' && identities(x.serial, false).some((id) => mine.includes(id)));
+  return w?.serial ?? null;
+}
+
+/** Aparelhos da listagem (página Aparelhos, contador da barra lateral e escolha do alvo). */
+export function listedDevices(): Device[] {
+  return app.devices.filter((d) => !hiddenByUsb(d.serial));
+}
+
 export function findDevice(serial: string): Device | undefined {
   return app.devices.find((d) => d.serial === serial);
 }
@@ -257,6 +343,7 @@ export async function refreshSummary(serial: string, quiet = true): Promise<void
     const s = await api.summary(serial, quiet);
     app.summaries[serial] = s;
     delete app.summaryErrors[serial];
+    if (tcpAddress(serial)) noteRecent(serial, s);
   } catch (e) {
     app.summaryErrors[serial] = String(e);
   }
@@ -383,10 +470,25 @@ export async function reconnect(serial: string): Promise<boolean> {
   return reconnectUsb(serial);
 }
 
-export function addRecent(address: string, name: string): void {
+/** Conectou: o endereço vai para o fim da lista (os que faltam conectar ficam em cima). */
+export function addRecent(address: string, name: string, serial?: string | null): void {
+  const old = app.settings.recentConnections.find((r) => r.address === address);
   const list = app.settings.recentConnections.filter((r) => r.address !== address);
-  list.unshift({ address, name, at: Date.now() });
-  app.settings.recentConnections = list.slice(0, 12);
+  list.push({ address, name, at: Date.now(), serial: serial ?? old?.serial });
+  app.settings.recentConnections = list.slice(-12);
+  saveSettings();
+}
+
+/** O resumo de um aparelho de rede chegou: guarda o serial e o nome na conexão recente. */
+function noteRecent(address: string, s: Summary): void {
+  const r = app.settings.recentConnections.find((x) => x.address === address);
+  if (!r) return;
+  const serial = terminalSerial(s.props) ?? undefined;
+  const dev = app.devices.find((d) => d.serial === address);
+  const name = dev ? friendlyName(dev, s) : r.name;
+  if (r.serial === serial && r.name === name) return;
+  r.serial = serial;
+  r.name = name;
   saveSettings();
 }
 
@@ -444,7 +546,7 @@ export async function boot(): Promise<void> {
     await listen<{ devices: Device[]; first: boolean }>('devices', (e) => onDevices(e.devices, e.first));
     await listen<LogEntry>('cmdlog', onLog);
     await listen<{ running: boolean }>('server', (p) => (app.serverRunning = p.running));
-    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
     setInterval(tick, 1000);
     setInterval(checkServer, 5000);
   }

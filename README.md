@@ -106,6 +106,10 @@ No primeiro build, o xwin baixa o CRT do MSVC e o SDK do Windows dos servidores 
 a licença deles (https://go.microsoft.com/fwlink/?LinkId=2086102). O script só segue com `--accept-license`. O
 download fica em `~/.cache/cargo-xwin` e é reaproveitado.
 
+O visual do instalador fica em `src-tauri/windows/`: as imagens da faixa lateral e do cabeçalho e o ícone saem de
+`scripts/installer-images.sh` (precisa de inkscape e ImageMagick), os textos das telas ficam em `lang/*.nsh` e as
+definições do Modern UI, em `installer-hooks.nsh`. O instalador abre em português ou inglês conforme o Windows.
+
 A versão portátil (`--features portable` com `src-tauri/tauri.portable.conf.json`) guarda configurações, histórico,
 o platform-tools baixado e o perfil do WebView2 em `adb-gui-manager-data`, ao lado do .exe. Ela precisa do WebView2
 Runtime, que já vem no Windows 10 e 11 atualizados.
@@ -113,7 +117,8 @@ Runtime, que já vem no Windows 10 e 11 atualizados.
 ## Release
 
 1. Suba a versão nos cinco arquivos (`package.json`, `package-lock.json`, `src-tauri/Cargo.toml`, `Cargo.lock`,
-   `src-tauri/tauri.conf.json`) e gere os pacotes (Linux, `--installer` e `--portable` de Windows).
+   `src-tauri/tauri.conf.json`), rode `scripts/installer-images.sh` (a faixa lateral do instalador mostra a versão)
+   e gere os pacotes (Linux, `--installer` e `--portable` de Windows).
 2. Escreva as notas (uma linha `- ` por item; elas aparecem no aviso de atualização) e rode:
 
 ```bash

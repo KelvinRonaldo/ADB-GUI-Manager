@@ -34,6 +34,8 @@ pub struct AppState {
     /// O `adb track-devices` do tracker está rodando (para esperar ele sair antes de reiniciar o app).
     pub tracker_live: AtomicBool,
     pub cli_adb: Option<String>,
+    /// Espelhamentos de tela (scrcpy) abertos.
+    pub mirrors: Mutex<HashMap<u64, crate::mirror::MirrorHandle>>,
     /// Última lista do track-devices, para quem chegar depois do primeiro bloco.
     pub devices: Mutex<Vec<crate::parse::Device>>,
 }

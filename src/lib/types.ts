@@ -124,6 +124,8 @@ export interface RecentConnection {
   address: string;
   name: string;
   at: number;
+  /** Serial do terminal (etiqueta), quando já se conhece. */
+  serial?: string;
 }
 
 export interface SavedCommand {
@@ -137,6 +139,9 @@ export interface Favorite {
 }
 
 export type Theme = 'system' | 'light' | 'dark';
+/** Paletas: três claras e três escuras ("classic" é a original de cada modo). */
+export type LightPalette = 'classic' | 'lavender' | 'sun';
+export type DarkPalette = 'classic' | 'forest' | 'plum';
 /** Como a lista de aparelhos aparece: cartões, linhas com os mesmos dados ou só o essencial. */
 export type DevicesView = 'grid' | 'list' | 'compact';
 export type Lang = 'pt-BR' | 'en-US';
@@ -151,6 +156,10 @@ export interface Settings {
   env: Record<string, string>;
   keepHistory: boolean;
   theme: Theme;
+  lightTheme: LightPalette;
+  darkTheme: DarkPalette;
+  /** Fechar a janela só a esconde; o app continua na bandeja. */
+  closeToTray: boolean;
   language: Lang | '';
   summaryRefreshSec: number;
   confirmDestructive: boolean;
@@ -167,6 +176,11 @@ export interface Settings {
   /** Seriais que o usuário pediu para não passar sozinhos. */
   usbToWifiSkip: string[];
   devicesView: DevicesView;
+  /** Espelhamento: qualidade (low/medium/high/original), fps e controle. */
+  mirrorQuality: string;
+  mirrorFps: number;
+  mirrorControl: boolean;
+  mirrorStayAwake: boolean;
   /** Última busca de atualização (só a que a pessoa pediu). */
   updateLastCheck: { at: number; found: string | null } | null;
 }
@@ -201,6 +215,7 @@ export type Page =
   | 'files'
   | 'shell'
   | 'logcat'
+  | 'mirror'
   | 'commands'
   | 'settings';
 

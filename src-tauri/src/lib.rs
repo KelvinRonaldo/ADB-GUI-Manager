@@ -3,6 +3,7 @@ mod commands;
 mod download;
 mod files;
 mod locate;
+mod mirror;
 mod parse;
 mod pty;
 mod runner;
@@ -10,6 +11,7 @@ mod settings;
 mod state;
 mod stream;
 mod tracker;
+mod tray;
 mod update;
 
 use state::AppState;
@@ -45,6 +47,9 @@ fn portable_base() -> Option<std::path::PathBuf> {
 
 pub fn run() {
     let app = tauri::Builder::default()
+        // Abrir o app de novo (atalho, Menu Iniciar) traz a janela já aberta, inclusive da bandeja,
+        // em vez de criar uma segunda cópia com outra bandeja e outro track-devices.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main(app)))
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -86,6 +91,7 @@ pub fn run() {
                 tracker_paused: AtomicBool::new(false),
                 tracker_notify: Notify::new(),
                 tracker_live: AtomicBool::new(false),
+                mirrors: Mutex::new(HashMap::new()),
                 cli_adb: cli,
                 devices: Mutex::new(Vec::new()),
             });
@@ -98,7 +104,29 @@ pub fn run() {
             app.manage(state);
             #[cfg(feature = "portable")]
             create_portable_window(app, portable.as_deref())?;
+            tray::init(app.handle());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // "Ao fechar a janela: manter na bandeja": o X esconde; o app sai pelo menu da bandeja.
+            // Só a janela principal: a destacada do espelho fecha de verdade (e para o espelho).
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() != "main" {
+                    return;
+                }
+                let keep = window
+                    .app_handle()
+                    .try_state::<Arc<AppState>>()
+                    .map(|st| st.settings().close_to_tray)
+                    .unwrap_or(false);
+                if keep && tray::TRAY_OK.load(std::sync::atomic::Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                } else if let Some(m) = window.app_handle().get_webview_window("mirror") {
+                    // Fechou o app: a janela destacada vai junto.
+                    let _ = m.destroy();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_init,
@@ -139,6 +167,11 @@ pub fn run() {
             commands::devices_current,
             commands::device_wifi_ip,
             commands::device_wake,
+            commands::mirror_start,
+            commands::mirror_control,
+            commands::mirror_stop,
+            tray::tray_update,
+            tray::tray_available,
         ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o ADB GUI Manager");

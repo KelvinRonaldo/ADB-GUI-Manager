@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { serialOf } from '../lib/deviceView';
   // Prévia da captura de tela: imagem, dados e as ações Copiar, Salvar e Capturar de novo.
   import Modal from './Modal.svelte';
   import Icon from './Icon.svelte';
@@ -6,8 +7,29 @@
   import { formatBytes } from '../lib/format';
   import { cap, closeCapture, copyCapture, openCapture, saveCapture } from '../lib/capture.svelte';
   import { whenText } from '../lib/update.svelte';
+  import { isTauri } from '../lib/ipc';
 
   const title = $derived(t('capture.title', { name: cap.name }));
+
+  // Pedida pela janela destacada em "Sempre visível": a principal sobe por cima dela enquanto a
+  // prévia estiver aberta, senão a prévia fica escondida atrás do espelho.
+  $effect(() => {
+    if (!cap.above || !isTauri) return;
+    let main: Awaited<ReturnType<typeof mainWindow>> | undefined;
+    mainWindow().then(async (w) => {
+      main = w;
+      await w.setAlwaysOnTop(true).catch(() => undefined);
+      await w.setFocus().catch(() => undefined);
+    });
+    return () => {
+      if (main) main.setAlwaysOnTop(false).catch(() => undefined);
+      else mainWindow().then((w) => w.setAlwaysOnTop(false).catch(() => undefined));
+    };
+  });
+  async function mainWindow() {
+    const { getCurrentWindow } = await import('@tauri-apps/api/window');
+    return getCurrentWindow();
+  }
 
   function onkey(e: KeyboardEvent) {
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -38,7 +60,7 @@
         <dt>{t('capture.device')}</dt>
         <dd>{cap.name}</dd>
         <dt>{t('capture.serial')}</dt>
-        <dd class="mono small">{cap.serial}</dd>
+        <dd class="mono small">{serialOf(cap.serial) ?? cap.serial}</dd>
         <dt>{t('capture.resolution')}</dt>
         <dd>{cap.info ? `${cap.info.width} × ${cap.info.height}` : '…'}</dd>
         <dt>{t('capture.size')}</dt>

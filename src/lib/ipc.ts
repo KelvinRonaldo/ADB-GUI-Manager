@@ -37,6 +37,29 @@ export async function listen<T>(event: string, cb: (payload: T) => void): Promis
   return m.mockListen(event, cb as (p: unknown) => void);
 }
 
+export interface MirrorOptions {
+  maxSize: number;
+  bitRate: number;
+  maxFps: number;
+  control: boolean;
+  stayAwake: boolean;
+}
+
+/**
+ * Espelhamento (scrcpy): o Rust manda o vídeo por um canal binário. Cada mensagem começa
+ * com o tipo (ver mirror.rs). Fora do Tauri não há vídeo: o mock só devolve um id.
+ */
+export async function mirrorStart(serial: string, options: MirrorOptions, onData: (buf: ArrayBuffer) => void): Promise<number> {
+  if (isTauri) {
+    const { Channel, invoke } = await import('@tauri-apps/api/core');
+    const channel = new Channel<ArrayBuffer>();
+    channel.onmessage = onData;
+    return invoke<number>('mirror_start', { serial, options, channel });
+  }
+  const m = await import('./mock');
+  return m.mockInvoke('mirror_start', { serial, options }) as Promise<number>;
+}
+
 export interface RunOptions {
   serial?: string | null;
   timeoutMs?: number;
@@ -52,6 +75,8 @@ export const api = {
     invoke<RunResult>('adb_run', { args, serial: o.serial ?? null, timeoutMs: o.timeoutMs ?? null, quiet: o.quiet ?? false }),
   runToFile: (args: string[], serial: string | null, path: string) =>
     invoke<RunResult>('adb_run_to_file', { args, serial, path }),
+  mirrorControl: (id: number, msg: number[]) => invoke<void>('mirror_control', { id, msg }),
+  mirrorStop: (id: number) => invoke<void>('mirror_stop', { id }),
   streamStart: (args: string[], serial: string | null) => invoke<number>('stream_start', { args, serial }),
   streamStop: (id: number) => invoke<void>('stream_stop', { id }),
   ptyOpen: (args: string[], serial: string | null, cols: number, rows: number) =>
@@ -61,8 +86,8 @@ export const api = {
   ptyClose: (id: number) => invoke<void>('pty_close', { id }),
   summary: (serial: string, quiet = true) => invoke<Summary>('device_summary', { serial, quiet }),
   mdns: (quiet = true) => invoke<MdnsService[]>('mdns_services', { quiet }),
-  remoteList: (serial: string, path: string) =>
-    invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path }),
+  remoteList: (serial: string, path: string, runAs: string | null = null) =>
+    invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path, runAs }),
   packages: (serial: string, filter: string) =>
     invoke<{ packages: Package[]; result: RunResult }>('packages_list', { serial, filter }),
   localList: (path: string) => invoke<LocalEntry[]>('local_list', { path }),
@@ -86,6 +111,8 @@ export const api = {
   historyClear: () => invoke<void>('history_clear'),
   devicesCurrent: () => invoke<Device[]>('devices_current'),
   wake: (serial: string) => invoke<{ state: 'awake' | 'woke' | 'asleep'; method?: string | null }>('device_wake', { serial }),
+  trayAvailable: () => invoke<boolean>('tray_available'),
+  trayUpdate: (show: string, target: string, quit: string) => invoke<void>('tray_update', { show, target, quit }),
   wifiIp: (serial: string) => invoke<{ ip: string | null; result: RunResult }>('device_wifi_ip', { serial }),
 };
 

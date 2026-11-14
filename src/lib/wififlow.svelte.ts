@@ -6,7 +6,8 @@
 import { api } from './ipc';
 import { classify, type AdbError } from './errors';
 import { t } from './i18n.svelte';
-import { addRecent, app, deviceName, findDevice, saveSettings, setTarget } from './state.svelte';
+import { terminalSerial } from './format';
+import { addRecent, app, deviceName, findDevice, refreshSummary, saveSettings, setTarget, wifiTwin } from './state.svelte';
 
 export type StepId = 'ip' | 'tcpip' | 'connect';
 export type StepState = 'pending' | 'running' | 'done' | 'error' | 'skipped';
@@ -74,11 +75,18 @@ export function startWifiFlow(serial: string, opts: { auto?: boolean; ask?: bool
 }
 
 /** Chamado pela lista de aparelhos quando um USB novo fica pronto com o app aberto. */
-export function onUsbReady(serial: string): void {
+export async function onUsbReady(serial: string): Promise<void> {
   const mode = app.settings.usbToWifi;
   if (mode === 'off' || app.settings.usbToWifiSkip.includes(serial)) return;
   const last = handled.get(serial);
   if (last && Date.now() - last < HOLD_MS) return;
+  if (flow.current?.serial === serial || flow.queue.some((q) => q.serial === serial)) return;
+  // Antes de passar para o Wi-Fi (mesmo no automático), confere se o aparelho já não está
+  // conectado por Wi-Fi, em qualquer IP ou porta. O serial de cada entrada Wi-Fi vem do resumo:
+  // as que ainda não têm (acabaram de entrar) são lidas antes de decidir.
+  const unread = app.devices.filter((d) => d.connection === 'wifi' && d.stateKind === 'device' && !app.summaries[d.serial]);
+  if (unread.length) await Promise.all(unread.map((d) => refreshSummary(d.serial)));
+  if (wifiTwin(serial)) return;
   if (flow.current?.serial === serial || flow.queue.some((q) => q.serial === serial)) return;
   startWifiFlow(serial, { auto: mode === 'auto', ask: mode === 'ask' });
 }
@@ -227,7 +235,7 @@ async function run(from: StepId): Promise<void> {
   if (!alive()) return;
   f.phase = 'done';
   f.status = '';
-  addRecent(address(), f.name);
+  addRecent(address(), f.name, terminalSerial(app.summaries[f.serial]?.props));
   const wasTarget = app.settings.targetSerial === f.serial || !findDevice(app.settings.targetSerial);
   if (wasTarget) setTarget(address());
   f.result = t('wifi.done', { name: f.name, address: address() }) + (wasTarget ? ' ' + t('wifi.doneTarget') : '');

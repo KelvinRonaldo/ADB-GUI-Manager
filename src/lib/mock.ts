@@ -18,11 +18,20 @@ const params = new URLSearchParams(typeof location !== 'undefined' ? location.se
 let adbOk = !params.has('noadb');
 let nextId = 1;
 let settings: Record<string, unknown> = params.has('fresh') ? {} : { tourDone: !params.has('tour'), pageGuides: params.has('guides') ? 'ask' : 'never' };
+// Prévia: ?lang=pt-BR&theme=dark&dark=forest&light=sun&page=settings abre direto no tema e na tela pedidos.
+if (params.has('lang')) settings.language = params.get('lang');
+if (params.has('theme')) settings.theme = params.get('theme');
+if (params.has('light')) settings.lightTheme = params.get('light');
+if (params.has('dark')) settings.darkTheme = params.get('dark');
 
 let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
   { serial: '192.168.0.42:5555', state: 'device', stateKind: 'device', connection: 'wifi', product: 'P2', model: 'P2', device: 'P2', transportId: '5' },
   { serial: 'R5CT90XYZ', state: 'unauthorized', stateKind: 'unauthorized', connection: 'usb', usb: '1-5', transportId: '7' },
+  // ?dual: o mesmo P2 também pelo USB (a entrada Wi-Fi fica oculta).
+  ...(params.has('dual')
+    ? ([{ serial: 'P2-0042', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-6', product: 'P2', model: 'P2', device: 'P2', transportId: '6' }] as Device[])
+    : []),
   // ?many: outros estados, para ver as três visualizações da lista.
   ...(params.has('many')
     ? ([
@@ -85,6 +94,8 @@ const PROPS: Record<string, Record<string, string>> = {
     'ro.sf.lcd_density': '320',
   },
 };
+
+PROPS['P2-0042'] = PROPS['192.168.0.42:5555'];
 
 const HELP = `Android Debug Bridge version 1.0.41
 Version 35.0.2
@@ -250,6 +261,8 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): Promise<unknown> {
   switch (cmd) {
     case 'app_init': {
+      const page = params.get('page');
+      if (page) setTimeout(() => import('./state.svelte').then((m) => (m.app.page = page as never)), 0);
       setTimeout(() => emit('devices', { devices: adbOk ? DEVICES : [], first: true }), 400);
       const info: InitInfo = {
         adb: adbOk ? { path: '/usr/bin/adb', source: 'path', version: { adbVersion: '1.0.41', toolsVersion: '35.0.2', installedAs: '/usr/bin/adb' } } : null,
@@ -405,10 +418,20 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       ];
     case 'remote_list': {
       const id = nextId++;
-      const c = `adb -s ${a.serial} shell "ls -la ${a.path}"`;
+      const c = `adb -s ${a.serial} shell "${a.runAs ? `run-as ${a.runAs} ` : ''}ls -la ${a.path}"`;
       log(id, c, 'running');
       await wait(150);
       log(id, c, 'done', 0, 150);
+      if (a.runAs)
+        return {
+          entries: [
+            { name: 'cache', perms: 'drwxrws--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97_cache' },
+            { name: 'databases', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97' },
+            { name: 'files', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:02', owner: 'u0_a97', group: 'u0_a97' },
+            { name: 'shared_prefs', perms: 'drwxrwx--x', isDir: true, isLink: false, size: null, modified: '2026-11-13 08:03', owner: 'u0_a97', group: 'u0_a97' },
+          ],
+          result: { id, cmd: c, code: 0, stdout: '', stderr: '', durationMs: 150, timedOut: false },
+        };
       return {
         entries: [
           { name: 'Aditum', perms: 'drwxrwx---', isDir: true, isLink: false, size: null, modified: '2026-11-10 09:12', owner: 'root', group: 'everybody' },
@@ -534,6 +557,21 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
       return null;
     case 'devices_current':
       return adbOk ? DEVICES : [];
+    case 'mirror_start': {
+      const id = nextId++;
+      const c = `adb -s ${a.serial} shell CLASSPATH=/data/local/tmp/adbgui-scrcpy-server.jar app_process / com.genymobile.scrcpy.Server 5.0.1 …`;
+      log(id, c, 'running');
+      await wait(400);
+      return id;
+    }
+    case 'mirror_control':
+      return null;
+    case 'mirror_stop':
+      return null;
+    case 'tray_available':
+      return true;
+    case 'tray_update':
+      return null;
     case 'device_wake': {
       const id = nextId++;
       const c = `adb -s ${a.serial} shell "if dumpsys power | grep -qE '…'; then echo AWAKE; else input keyevent 224 …"`;

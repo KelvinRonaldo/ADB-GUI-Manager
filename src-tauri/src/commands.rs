@@ -199,12 +199,23 @@ pub struct RemoteList {
 }
 
 #[tauri::command]
-pub async fn remote_list(app: AppHandle, st: St<'_>, serial: String, path: String) -> Result<RemoteList, String> {
+pub async fn remote_list(
+    app: AppHandle,
+    st: St<'_>,
+    serial: String,
+    path: String,
+    run_as: Option<String>,
+) -> Result<RemoteList, String> {
     let dir = if path.ends_with('/') { path } else { format!("{}/", path) };
+    // Com run-as, o ls roda com o usuário do app (só apps debuggable) e enxerga /data/data/<pacote>.
+    let prefix = match run_as.as_deref().filter(|p| !p.is_empty()) {
+        Some(p) => format!("run-as {} ", parse::sh_quote(p)),
+        None => String::new(),
+    };
     let r = runner::run(
         &app,
         &st,
-        vec!["shell".into(), format!("ls -la {}", parse::sh_quote(&dir))],
+        vec!["shell".into(), format!("{}ls -la {}", prefix, parse::sh_quote(&dir))],
         RunOpts { serial: Some(serial), timeout_ms: Some(20_000), quiet: false },
     )
     .await?;
@@ -433,4 +444,25 @@ pub async fn device_wake(app: AppHandle, st: St<'_>, serial: String) -> Result<W
     } else {
         WakeResult { state: "asleep".into(), method: None }
     })
+}
+
+#[tauri::command]
+pub async fn mirror_start(
+    app: AppHandle,
+    st: St<'_>,
+    serial: String,
+    options: crate::mirror::MirrorOptions,
+    channel: tauri::ipc::Channel<tauri::ipc::InvokeResponseBody>,
+) -> Result<u64, String> {
+    crate::mirror::start(app, st.inner().clone(), serial, options, channel).await
+}
+
+#[tauri::command]
+pub fn mirror_control(st: St<'_>, id: u64, msg: Vec<u8>) -> Result<(), String> {
+    crate::mirror::control(&st, id, msg)
+}
+
+#[tauri::command]
+pub fn mirror_stop(st: St<'_>, id: u64) {
+    crate::mirror::stop(&st, id);
 }
