@@ -1,6 +1,6 @@
 [package]
 name = "adb-gui-manager"
-version = "0.3.13"
+version = "0.3.15"
 description = "Interface gráfica para o adb"
 authors = ["Kelvin Ronaldo"]
 edition = "2021"

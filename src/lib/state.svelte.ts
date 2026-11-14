@@ -135,8 +135,10 @@ export function applyTheme(broadcast = isTauri && isMainWindow): void {
   const root = document.documentElement;
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.palette = (dark ? app.settings.darkTheme : app.settings.lightTheme) || 'classic';
-  // Barra de título da janela (Windows) no mesmo modo do app.
-  if (isTauri) {
+  // Barra de título da janela (Windows) no mesmo modo do app. A janela destacada do espelho tem
+  // conteúdo escuro nos dois temas: nasce com a barra escura e não muda (no Windows o setTheme
+  // numa janela criada em tempo de execução só pegava na criação).
+  if (isTauri && isMainWindow) {
     import('@tauri-apps/api/window')
       .then(async ({ getCurrentWindow }) => {
         const w = getCurrentWindow();
@@ -164,6 +166,11 @@ async function repaintTitleBar(w: import('@tauri-apps/api/window').Window): Prom
   const size = await w.innerSize();
   await w.setSize(new PhysicalSize(size.width + 1, size.height));
   await w.setSize(new PhysicalSize(size.width, size.height));
+  // Com escala fracionária (125%, 150%) a volta arredonda e a janela crescia 1 px a cada troca.
+  const after = await w.innerSize();
+  const dw = after.width - size.width;
+  const dh = after.height - size.height;
+  if (dw || dh) await w.setSize(new PhysicalSize(size.width - dw, size.height - dh));
 }
 
 export function setLanguage(l: Settings['language']): void {

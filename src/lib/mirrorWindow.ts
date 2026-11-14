@@ -62,6 +62,8 @@ export async function openDetached(serial: string, w: number, h: number): Promis
     minHeight: 300,
     center: true,
     focus: true,
+    // Conteúdo escuro nos dois temas do app: barra de título escura desde a criação.
+    theme: 'dark',
   });
   detached.open = true;
   detached.serial = serial;
