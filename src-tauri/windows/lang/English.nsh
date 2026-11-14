@@ -31,3 +31,5 @@ LangString adbWelcomeText ${LANG_ENGLISH} "A GUI for adb: USB and Wi-Fi connecti
 LangString adbFinishTitle ${LANG_ENGLISH} "Installation complete"
 LangString adbFinishText ${LANG_ENGLISH} "${PRODUCTNAME} is in the Start menu."
 LangString adbRunNow ${LANG_ENGLISH} "Open ${PRODUCTNAME} now"
+LangString adbDirTop ${LANG_ENGLISH} "${PRODUCTNAME} will be installed in the folder below. To use another one, click Browse."
+LangString adbUnTop ${LANG_ENGLISH} "${PRODUCTNAME} will be removed from the folder below. Click Uninstall to continue."

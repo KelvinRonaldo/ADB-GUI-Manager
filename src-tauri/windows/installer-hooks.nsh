@@ -13,3 +13,8 @@
 !define MUI_FINISHPAGE_RUN_TEXT "$(adbRunNow)"
 ; Atalho na Área de Trabalho fica opcional (desmarcado).
 !define MUI_FINISHPAGE_SHOWREADME_NOTCHECKED
+
+; Texto do topo da tela Pasta e da confirmação do desinstalador (os padrões do NSIS em pt-BR
+; cortam em 125% e usam "pra").
+!define MUI_DIRECTORYPAGE_TEXT_TOP "$(adbDirTop)"
+!define MUI_UNCONFIRMPAGE_TEXT_TOP "$(adbUnTop)"
