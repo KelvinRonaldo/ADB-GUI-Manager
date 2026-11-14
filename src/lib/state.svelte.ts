@@ -1,4 +1,4 @@
-import { api, listen } from './ipc';
+import { api, isTauri, listen } from './ipc';
 import { detectLang, lang, t } from './i18n.svelte';
 import { friendlyName, tcpAddress, terminalSerial } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
@@ -132,6 +132,12 @@ export function applyTheme(): void {
   const root = document.documentElement;
   root.dataset.theme = dark ? 'dark' : 'light';
   root.dataset.palette = (dark ? app.settings.darkTheme : app.settings.lightTheme) || 'classic';
+  // Barra de título da janela (Windows) no mesmo modo do app.
+  if (isTauri) {
+    import('@tauri-apps/api/window')
+      .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(s === 'system' ? null : dark ? 'dark' : 'light'))
+      .catch(() => {});
+  }
 }
 
 export function setLanguage(l: Settings['language']): void {

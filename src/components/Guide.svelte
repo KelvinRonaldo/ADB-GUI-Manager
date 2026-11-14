@@ -168,7 +168,7 @@
     position: fixed;
     border-radius: 12px;
     box-shadow:
-      0 0 0 3px #60a5fa,
+      0 0 0 3px var(--accent),
       0 0 0 9999px var(--scrim);
     transition: all 0.18s ease;
   }
