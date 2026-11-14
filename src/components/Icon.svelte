@@ -46,6 +46,20 @@
     viewList: '<rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="18" height="6" rx="1.5"/>',
     viewCompact: '<line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>',
     terminalApp: '<polyline points="5 8 10 12 5 16"/><line x1="12" y1="17" x2="19" y2="17"/>',
+    // Teclas do aparelho e janela do espelho.
+    back: '<line x1="19" y1="12" x2="5" y2="12"/><polyline points="11 6 5 12 11 18"/>',
+    home: '<circle cx="12" cy="12" r="7"/>',
+    recents: '<rect x="5.5" y="5.5" width="13" height="13" rx="2"/>',
+    volUp: '<path d="M4 10h3l5-4v12l-5-4H4z"/><path d="M15.5 9.5a4 4 0 0 1 0 5"/><path d="M18 7a7.5 7.5 0 0 1 0 10"/>',
+    volDown: '<path d="M4 10h3l5-4v12l-5-4H4z"/><path d="M15.5 9.5a4 4 0 0 1 0 5"/>',
+    bell: '<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+    screenOff: '<rect x="6" y="2" width="12" height="20" rx="2"/><line x1="3" y1="3" x2="21" y2="21"/>',
+    screenOn: '<rect x="6" y="2" width="12" height="20" rx="2"/><line x1="11" y1="18" x2="13" y2="18"/>',
+    detach: '<rect x="3" y="8" width="12" height="12" rx="1.5"/><path d="M9 8V5.5A1.5 1.5 0 0 1 10.5 4h9A1.5 1.5 0 0 1 21 5.5v9a1.5 1.5 0 0 1-1.5 1.5H15"/>',
+    fullscreen: '<polyline points="4 9 4 4 9 4"/><polyline points="15 4 20 4 20 9"/><polyline points="20 15 20 20 15 20"/><polyline points="9 20 4 20 4 15"/>',
+    exitFullscreen: '<polyline points="9 4 9 9 4 9"/><polyline points="20 9 15 9 15 4"/><polyline points="15 20 15 15 20 15"/><polyline points="4 15 9 15 9 20"/>',
+    pin: '<path d="M9 4h6l-1 6 3 3v1H7v-1l3-3z"/><line x1="12" y1="14" x2="12" y2="20"/>',
+    dock: '<rect x="3" y="4" width="18" height="16" rx="2"/><polyline points="12 8 8 12 12 16"/><line x1="8" y1="12" x2="17" y2="12"/>',
   };
 
   let { name, size = 18, stroke = 1.8, class: cls = '' }: { name: string; size?: number; stroke?: number; class?: string } = $props();

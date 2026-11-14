@@ -24,6 +24,7 @@
   import { initUpdates, upd } from './lib/update.svelte';
   import { app, boot, deviceName, startPageGuide, startTour } from './lib/state.svelte';
   import { api } from './lib/ipc';
+  import { initMirrorWindowEvents } from './lib/mirrorWindow';
   import { lang, t } from './lib/i18n.svelte';
   import type { Page } from './lib/types';
 
@@ -41,6 +42,7 @@
     try {
       await boot();
       initUpdates();
+      initMirrorWindowEvents();
     } catch (e) {
       bootError = String(e);
     }

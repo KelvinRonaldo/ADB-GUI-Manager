@@ -109,7 +109,11 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             // "Ao fechar a janela: manter na bandeja": o X esconde; o app sai pelo menu da bandeja.
+            // Só a janela principal: a destacada do espelho fecha de verdade (e para o espelho).
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() != "main" {
+                    return;
+                }
                 let keep = window
                     .app_handle()
                     .try_state::<Arc<AppState>>()
@@ -118,6 +122,9 @@ pub fn run() {
                 if keep && tray::TRAY_OK.load(std::sync::atomic::Ordering::SeqCst) {
                     api.prevent_close();
                     let _ = window.hide();
+                } else if let Some(m) = window.app_handle().get_webview_window("mirror") {
+                    // Fechou o app: a janela destacada vai junto.
+                    let _ = m.destroy();
                 }
             }
         })

@@ -3,12 +3,22 @@
   "identifier": "default",
   "description": "Só o que a interface usa. Arquivos do computador passam pelos comandos do app, que recebem caminhos escolhidos nos diálogos.",
   "windows": [
-    "main"
+    "main",
+    "mirror"
   ],
   "permissions": [
     "core:default",
     "core:window:allow-close",
     "core:window:allow-set-theme",
+    "core:window:allow-set-fullscreen",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-focus",
+    "core:window:allow-set-size",
+    "core:window:allow-set-title",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-destroy",
+    "core:webview:allow-create-webview-window",
     "dialog:allow-open",
     "dialog:allow-save",
     "dialog:allow-message",
