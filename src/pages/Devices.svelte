@@ -5,18 +5,22 @@
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import Icon from '../components/Icon.svelte';
   import { t } from '../lib/i18n.svelte';
-  import { app, navigate, saveSettings } from '../lib/state.svelte';
+  import { app, hiddenByUsb, listedDevices, navigate, saveSettings } from '../lib/state.svelte';
   import type { DevicesView } from '../lib/types';
 
   let filter = $state<'all' | 'usb' | 'wifi' | 'emulator'>('all');
+  // Ligado por USB e Wi-Fi ao mesmo tempo: só o USB aparece; o Wi-Fi volta quando o cabo sai.
+  const listed = $derived(listedDevices());
   const counts = $derived({
-    all: app.devices.length,
-    usb: app.devices.filter((d) => d.connection === 'usb').length,
-    wifi: app.devices.filter((d) => d.connection === 'wifi').length,
-    emulator: app.devices.filter((d) => d.connection === 'emulator').length,
+    all: listed.length,
+    usb: listed.filter((d) => d.connection === 'usb').length,
+    wifi: listed.filter((d) => d.connection === 'wifi').length,
+    emulator: listed.filter((d) => d.connection === 'emulator').length,
   });
-  const shown = $derived(app.devices.filter((d) => filter === 'all' || d.connection === filter));
-  const lost = $derived(Object.values(app.lost).filter((l) => !app.devices.some((d) => d.serial === l.serial) && (filter === 'all' || filter === 'wifi')));
+  const shown = $derived(listed.filter((d) => filter === 'all' || d.connection === filter));
+  const lost = $derived(
+    Object.values(app.lost).filter((l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi')),
+  );
   const labels = { all: 'devices.all', usb: 'conn.usb', wifi: 'conn.wifi', emulator: 'conn.emulator' } as const;
 
   const VIEWS = [
@@ -33,7 +37,7 @@
 </script>
 
 <div class="page">
-  <TopBar heading={t('devices.title')} sub={t('devices.subtitle', { n: app.devices.length })} />
+  <TopBar heading={t('devices.title')} sub={t('devices.subtitle', { n: listed.length })} />
   <div class="page-body">
     <PageGuideOffer page="devices" />
     <div class="row">

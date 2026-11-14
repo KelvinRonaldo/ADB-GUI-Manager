@@ -2,7 +2,7 @@
   import { upd } from '../lib/update.svelte';
   import Icon from './Icon.svelte';
   import { t } from '../lib/i18n.svelte';
-  import { app, confirmDialog, navigate, restartServer, checkServer, toast } from '../lib/state.svelte';
+  import { app, confirmDialog, listedDevices, navigate, restartServer, checkServer, toast } from '../lib/state.svelte';
   import { api } from '../lib/ipc';
   import type { Page } from '../lib/types';
   import type { Key } from '../lib/i18n.svelte';
@@ -68,8 +68,8 @@
   >
     <Icon name={icon} />
     <span class="label">{t(key)}</span>
-    {#if id === 'devices' && app.devices.length}
-      <span class="count">{app.devices.length}</span>
+    {#if id === 'devices' && listedDevices().length}
+      <span class="count">{listedDevices().length}</span>
     {/if}
   </a>
 {/snippet}

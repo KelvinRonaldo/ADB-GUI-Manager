@@ -268,6 +268,37 @@ export function readyDevices(): Device[] {
   return app.devices.filter((d) => d.stateKind === 'device');
 }
 
+/** Os seriais que identificam o aparelho físico: o do adb (no USB) e os lidos das propriedades. */
+function identities(serial: string, viaUsb: boolean): string[] {
+  const props = app.summaries[serial]?.props;
+  const ids = [terminalSerial(props), props?.['ro.serialno'], props?.['ro.boot.serialno']];
+  if (viaUsb) ids.push(serial);
+  return ids.map((v) => (v ?? '').trim()).filter((v) => v && !/^(unknown|null|none)$/i.test(v) && !/^0+$/.test(v));
+}
+
+/**
+ * Entrada Wi-Fi de um aparelho que também está pronto pelo USB: fica fora da listagem até o cabo
+ * sair (pedido do Kelvin, 14/11). Vale também para o Wi-Fi que caiu e aguarda reconexão.
+ */
+export function hiddenByUsb(serial: string): boolean {
+  return usbTwin(serial) !== null;
+}
+
+/** A entrada USB pronta do mesmo aparelho de uma entrada Wi-Fi, se houver. */
+export function usbTwin(serial: string): string | null {
+  const d = findDevice(serial);
+  if (d && d.connection !== 'wifi') return null;
+  const mine = identities(serial, false);
+  if (!mine.length) return null;
+  const u = app.devices.find((x) => x.connection === 'usb' && x.stateKind === 'device' && identities(x.serial, true).some((id) => mine.includes(id)));
+  return u?.serial ?? null;
+}
+
+/** Aparelhos da listagem (página Aparelhos, contador da barra lateral e escolha do alvo). */
+export function listedDevices(): Device[] {
+  return app.devices.filter((d) => !hiddenByUsb(d.serial));
+}
+
 export function findDevice(serial: string): Device | undefined {
   return app.devices.find((d) => d.serial === serial);
 }

@@ -22,7 +22,7 @@
   import CaptureDialog from './components/CaptureDialog.svelte';
   import { cap } from './lib/capture.svelte';
   import { initUpdates, upd } from './lib/update.svelte';
-  import { app, boot, deviceName, startPageGuide, startTour } from './lib/state.svelte';
+  import { app, boot, deviceName, setTarget, startPageGuide, startTour, usbTwin } from './lib/state.svelte';
   import { api } from './lib/ipc';
   import { initMirrorWindowEvents } from './lib/mirrorWindow';
   import { lang, t } from './lib/i18n.svelte';
@@ -51,6 +51,12 @@
   $effect(() => {
     // O tour só começa depois de escolhido o idioma.
     if (app.booted && app.settings.language && app.adb && !app.settings.tourDone && !app.tour.active && !app.tour.done) startTour();
+  });
+
+  // Alvo no Wi-Fi e o mesmo aparelho ligado no USB: a entrada Wi-Fi some da lista, o alvo vai para o USB.
+  $effect(() => {
+    const twin = usbTwin(app.settings.targetSerial);
+    if (twin) setTarget(twin);
   });
 
   // Menu da bandeja no idioma da interface, com o alvo atual.

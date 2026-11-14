@@ -4,7 +4,7 @@
   import Icon from './Icon.svelte';
   import Menu from './Menu.svelte';
   import { t } from '../lib/i18n.svelte';
-  import { app, deviceName, openDetails, refreshAll, setTarget, startPageGuide } from '../lib/state.svelte';
+  import { app, deviceName, listedDevices, openDetails, refreshAll, setTarget, startPageGuide } from '../lib/state.svelte';
   import { PAGE_GUIDES } from '../lib/guides';
 
   let { heading, sub = '' }: { heading: string; sub?: string } = $props();
@@ -86,7 +86,7 @@
       </button>
       {#if open}
         <ul class="menu" role="listbox" aria-labelledby="alvo-lbl">
-          {#each app.devices as d (d.serial)}
+          {#each listedDevices() as d (d.serial)}
             <li role="option" aria-selected={d.serial === app.settings.targetSerial}>
               <button type="button" class="pick" disabled={d.stateKind !== 'device'} onclick={() => pick(d.serial)}>
                 <span class="dot" class:off={d.stateKind !== 'device'}></span>
