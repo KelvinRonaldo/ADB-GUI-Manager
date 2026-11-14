@@ -28,6 +28,10 @@ let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
   { serial: '192.168.0.42:5555', state: 'device', stateKind: 'device', connection: 'wifi', product: 'P2', model: 'P2', device: 'P2', transportId: '5' },
   { serial: 'R5CT90XYZ', state: 'unauthorized', stateKind: 'unauthorized', connection: 'usb', usb: '1-5', transportId: '7' },
+  // ?dual: o mesmo P2 também pelo USB (a entrada Wi-Fi fica oculta).
+  ...(params.has('dual')
+    ? ([{ serial: 'P2-0042', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-6', product: 'P2', model: 'P2', device: 'P2', transportId: '6' }] as Device[])
+    : []),
   // ?many: outros estados, para ver as três visualizações da lista.
   ...(params.has('many')
     ? ([
@@ -90,6 +94,8 @@ const PROPS: Record<string, Record<string, string>> = {
     'ro.sf.lcd_density': '320',
   },
 };
+
+PROPS['P2-0042'] = PROPS['192.168.0.42:5555'];
 
 const HELP = `Android Debug Bridge version 1.0.41
 Version 35.0.2

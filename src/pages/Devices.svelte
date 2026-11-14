@@ -5,7 +5,7 @@
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import Icon from '../components/Icon.svelte';
   import { t } from '../lib/i18n.svelte';
-  import { app, hiddenByUsb, listedDevices, navigate, saveSettings } from '../lib/state.svelte';
+  import { app, deviceName, hiddenByUsb, listedDevices, navigate, saveSettings } from '../lib/state.svelte';
   import type { DevicesView } from '../lib/types';
 
   let filter = $state<'all' | 'usb' | 'wifi' | 'emulator'>('all');
@@ -21,6 +21,13 @@
   const lost = $derived(
     Object.values(app.lost).filter((l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi')),
   );
+  // Entradas Wi-Fi ocultas porque o mesmo aparelho está no USB: avisa em vez de parecer que sumiram.
+  const hiddenWifi = $derived(app.devices.filter((d) => d.connection === 'wifi' && hiddenByUsb(d.serial)));
+  const showHidden = $derived(hiddenWifi.length > 0 && (filter === 'all' || filter === 'wifi'));
+  const hiddenTitle = $derived(
+    hiddenWifi.length === 1 ? t('devices.hiddenWifiOne', { name: deviceName(hiddenWifi[0].serial) }) : t('devices.hiddenWifiMany', { n: hiddenWifi.length }),
+  );
+  const hiddenText = $derived(t(hiddenWifi.length === 1 ? 'devices.hiddenWifiTextOne' : 'devices.hiddenWifiTextMany'));
   const labels = { all: 'devices.all', usb: 'conn.usb', wifi: 'conn.wifi', emulator: 'conn.emulator' } as const;
 
   const VIEWS = [
@@ -65,6 +72,12 @@
     </div>
 
     {#if shown.length || lost.length}
+      {#if showHidden}
+        <div class="hidden-note" role="note">
+          <Icon name="connect" size={16} />
+          <span><strong>{hiddenTitle}</strong> — {hiddenText}</span>
+        </div>
+      {/if}
       {#if view === 'grid'}
         <div class="grid" data-guide="tour-devices">
           {#each shown as d, i (d.serial)}
@@ -102,6 +115,13 @@
         <Icon name="plus" size={18} stroke={2} />
         {t('devices.addHint')}
       </button>
+    {:else if showHidden}
+      <div class="card empty" data-guide="tour-devices">
+        <Icon name="connect" size={40} stroke={1.4} />
+        <h2>{hiddenTitle}</h2>
+        <p>{hiddenText.charAt(0).toUpperCase() + hiddenText.slice(1)}</p>
+        <button type="button" class="btn" onclick={() => (filter = 'usb')}>{t('devices.hiddenWifiShowUsb')}</button>
+      </div>
     {:else}
       <div class="card empty" data-guide="tour-devices">
         <Icon name="devices" size={40} stroke={1.4} />
@@ -178,6 +198,22 @@
   .add:hover {
     color: var(--accent);
     border-color: var(--accent);
+  }
+  .hidden-note {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .hidden-note strong {
+    color: var(--text);
+    font-weight: 600;
   }
   .empty h2 {
     font-size: 17px;
