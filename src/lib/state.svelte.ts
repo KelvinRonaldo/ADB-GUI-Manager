@@ -16,6 +16,9 @@ export const DEFAULT_SETTINGS: Settings = {
   env: {},
   keepHistory: true,
   theme: 'system',
+  lightTheme: 'classic',
+  darkTheme: 'classic',
+  closeToTray: false,
   language: '',
   summaryRefreshSec: 60,
   confirmDestructive: true,
@@ -126,7 +129,9 @@ export function saveSettings(): void {
 export function applyTheme(): void {
   const s = app.settings.theme;
   const dark = s === 'dark' || (s === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
-  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const root = document.documentElement;
+  root.dataset.theme = dark ? 'dark' : 'light';
+  root.dataset.palette = (dark ? app.settings.darkTheme : app.settings.lightTheme) || 'classic';
 }
 
 export function setLanguage(l: Settings['language']): void {

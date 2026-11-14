@@ -18,6 +18,11 @@ const params = new URLSearchParams(typeof location !== 'undefined' ? location.se
 let adbOk = !params.has('noadb');
 let nextId = 1;
 let settings: Record<string, unknown> = params.has('fresh') ? {} : { tourDone: !params.has('tour'), pageGuides: params.has('guides') ? 'ask' : 'never' };
+// Prévia: ?lang=pt-BR&theme=dark&dark=forest&light=sun&page=settings abre direto no tema e na tela pedidos.
+if (params.has('lang')) settings.language = params.get('lang');
+if (params.has('theme')) settings.theme = params.get('theme');
+if (params.has('light')) settings.lightTheme = params.get('light');
+if (params.has('dark')) settings.darkTheme = params.get('dark');
 
 let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
@@ -250,6 +255,8 @@ const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): Promise<unknown> {
   switch (cmd) {
     case 'app_init': {
+      const page = params.get('page');
+      if (page) setTimeout(() => import('./state.svelte').then((m) => (m.app.page = page as never)), 0);
       setTimeout(() => emit('devices', { devices: adbOk ? DEVICES : [], first: true }), 400);
       const info: InitInfo = {
         adb: adbOk ? { path: '/usr/bin/adb', source: 'path', version: { adbVersion: '1.0.41', toolsVersion: '35.0.2', installedAs: '/usr/bin/adb' } } : null,
@@ -554,6 +561,10 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
     case 'mirror_control':
       return null;
     case 'mirror_stop':
+      return null;
+    case 'tray_available':
+      return true;
+    case 'tray_update':
       return null;
     case 'device_wake': {
       const id = nextId++;

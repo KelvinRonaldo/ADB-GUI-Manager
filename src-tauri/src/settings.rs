@@ -18,6 +18,8 @@ pub struct Settings {
     pub stop_server_on_exit: bool,
     pub env: BTreeMap<String, String>,
     pub keep_history: bool,
+    /// Fechar a janela só a esconde; o app continua na bandeja.
+    pub close_to_tray: bool,
     #[serde(flatten)]
     pub extra: serde_json::Map<String, serde_json::Value>,
 }
@@ -33,6 +35,7 @@ impl Default for Settings {
             stop_server_on_exit: false,
             env: BTreeMap::new(),
             keep_history: true,
+            close_to_tray: false,
             extra: serde_json::Map::new(),
         }
     }

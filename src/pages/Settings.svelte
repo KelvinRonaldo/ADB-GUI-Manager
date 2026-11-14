@@ -9,7 +9,7 @@
   import { classify, type AdbError } from '../lib/errors';
   import { formatBytes } from '../lib/format';
   import { adbChanged, app, applyTheme, checkServer, confirmDialog, restartServer, saveSettings, setLanguage, startTour, toast } from '../lib/state.svelte';
-  import type { AdbVersion, Settings, Theme } from '../lib/types';
+  import type { AdbVersion, DarkPalette, LightPalette, Settings, Theme } from '../lib/types';
   import UpdateError from '../components/UpdateError.svelte';
   import { checkUpdates, openReleases, packageLabel, upd, whenText } from '../lib/update.svelte';
 
@@ -143,6 +143,33 @@
     applyTheme();
     saveSettings();
   }
+
+  const lightPalettes: LightPalette[] = ['classic', 'lavender', 'sun'];
+  const darkPalettes: DarkPalette[] = ['classic', 'forest', 'plum'];
+  function paletteName(mode: 'light' | 'dark', id: string): string {
+    if (id === 'classic') return mode === 'light' ? t('settings.palette.classic.light') : t('settings.palette.classic.dark');
+    const names: Record<string, string> = {
+      lavender: t('settings.palette.lavender'),
+      sun: t('settings.palette.sun'),
+      forest: t('settings.palette.forest'),
+      plum: t('settings.palette.plum'),
+    };
+    return names[id] ?? id;
+  }
+  function setPalette(mode: 'light' | 'dark', id: string) {
+    if (mode === 'light') app.settings.lightTheme = id as LightPalette;
+    else app.settings.darkTheme = id as DarkPalette;
+    applyTheme();
+    saveSettings();
+  }
+
+  // "Manter na bandeja" só aparece quando o sistema mostrou o ícone da bandeja.
+  let trayOk = $state(false);
+  api.trayAvailable().then((v) => (trayOk = v)).catch(() => {});
+  function setCloseToTray(v: boolean) {
+    app.settings.closeToTray = v;
+    saveSettings();
+  }
 </script>
 
 <div class="page">
@@ -261,8 +288,8 @@
         <div class="muted small">{t('settings.envHint')}</div>
       </section>
 
-      <section class="card sec">
-        <h2>{t('settings.app')}</h2>
+      <section class="card sec" data-guide="settings-look">
+        <h2>{t('settings.look')}</h2>
         <div class="field">
           <span>{t('settings.theme')}</span>
           <div class="seg" role="group" aria-label={t('settings.theme')}>
@@ -270,7 +297,29 @@
               <button type="button" aria-pressed={app.settings.theme === th} onclick={() => setTheme(th)}>{t(`settings.theme.${th}`)}</button>
             {/each}
           </div>
+          <span class="muted small hint">{t('settings.theme.hint')}</span>
         </div>
+        {#each [['light', lightPalettes, app.settings.lightTheme], ['dark', darkPalettes, app.settings.darkTheme]] as const as [mode, list, current] (mode)}
+          <div class="field">
+            <span id="pal-{mode}">{t(`settings.palette.${mode}`)}</span>
+            <div class="palettes" role="radiogroup" aria-labelledby="pal-{mode}">
+              {#each list as id (id)}
+                {@const cls = id === 'classic' ? `pal-classic-${mode}` : `pal-${id}`}
+                <button type="button" class="pal" role="radio" aria-checked={current === id} onclick={() => setPalette(mode, id)}>
+                  <span class="mini {cls}" aria-hidden="true">
+                    <span class="m-side"><span class="m-logo"></span><span class="m-act"></span><span class="m-line"></span><span class="m-line s"></span></span>
+                    <span class="m-main"><span class="m-title"></span><span class="m-card"><span class="m-text"></span><span class="m-btn"></span></span></span>
+                  </span>
+                  <span class="pal-name">{paletteName(mode, id)}</span>
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/each}
+      </section>
+
+      <section class="card sec">
+        <h2>{t('settings.app')}</h2>
         <div class="field">
           <span>{t('settings.language')}</span>
           <div class="seg langs" role="group" aria-label={t('settings.language')}>
@@ -287,6 +336,16 @@
           <input class="input tiny" type="number" min="10" max="3600" bind:value={app.settings.summaryRefreshSec} onchange={saveSettings} />
           {t('settings.seconds')}</label
         >
+        {#if trayOk}
+          <div class="field">
+            <span>{t('settings.onClose')}</span>
+            <div class="seg" role="group" aria-label={t('settings.onClose')}>
+              <button type="button" aria-pressed={!app.settings.closeToTray} onclick={() => setCloseToTray(false)}>{t('settings.onClose.quit')}</button>
+              <button type="button" aria-pressed={app.settings.closeToTray} onclick={() => setCloseToTray(true)}>{t('settings.onClose.tray')}</button>
+            </div>
+            {#if app.settings.closeToTray}<span class="muted small hint">{t('settings.onClose.hint')}</span>{/if}
+          </div>
+        {/if}
         <label class="check"><input type="checkbox" bind:checked={app.settings.keepHistory} onchange={saveSettings} /> {t('settings.keepHistory')}</label>
         <label class="check"><input type="checkbox" bind:checked={app.settings.confirmDestructive} onchange={saveSettings} /> {t('settings.confirmDestructive')}</label>
       </section>
@@ -391,6 +450,112 @@
 </div>
 
 <style>
+  .hint {
+    font-weight: 400;
+  }
+  .palettes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pal {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+  }
+  .pal:hover {
+    border-color: var(--border-strong);
+  }
+  .pal[aria-checked='true'] {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+  .pal-name {
+    padding: 0 2px;
+  }
+  .mini {
+    display: flex;
+    height: 54px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--bg);
+    border: 1px solid var(--border);
+  }
+  .m-side {
+    width: 28%;
+    background: var(--side-bg);
+    padding: 5px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .m-logo {
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    background: #3ddc84;
+    margin-bottom: 2px;
+  }
+  .m-act {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--side-active);
+  }
+  .m-line {
+    height: 4px;
+    width: 75%;
+    border-radius: 2px;
+    background: var(--side-item);
+    opacity: 0.45;
+  }
+  .m-line.s {
+    width: 55%;
+  }
+  .m-main {
+    flex: 1 1 auto;
+    padding: 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .m-title {
+    height: 5px;
+    width: 55%;
+    border-radius: 2px;
+    background: var(--text);
+  }
+  .m-card {
+    flex: 1 1 auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .m-text {
+    height: 3px;
+    width: 80%;
+    border-radius: 2px;
+    background: var(--muted);
+  }
+  .m-btn {
+    height: 8px;
+    width: 45%;
+    border-radius: 3px;
+    background: var(--accent);
+  }
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));

@@ -111,6 +111,8 @@ export const api = {
   historyClear: () => invoke<void>('history_clear'),
   devicesCurrent: () => invoke<Device[]>('devices_current'),
   wake: (serial: string) => invoke<{ state: 'awake' | 'woke' | 'asleep'; method?: string | null }>('device_wake', { serial }),
+  trayAvailable: () => invoke<boolean>('tray_available'),
+  trayUpdate: (show: string, target: string, quit: string) => invoke<void>('tray_update', { show, target, quit }),
   wifiIp: (serial: string) => invoke<{ ip: string | null; result: RunResult }>('device_wifi_ip', { serial }),
 };
 

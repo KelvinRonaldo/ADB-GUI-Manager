@@ -170,16 +170,16 @@
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
-    color: #c3c8d0;
+    color: var(--side-item);
     text-decoration: none;
   }
   .nav-item:hover {
     background: var(--side-hover);
-    color: #fff;
+    color: var(--side-strong);
   }
   .nav-item.active {
     background: var(--side-active);
-    color: #fff;
+    color: var(--side-strong);
     font-weight: 600;
   }
   .label {
@@ -188,20 +188,20 @@
   .count {
     font-size: 11px;
     font-weight: 600;
-    background: #3a4150;
+    background: var(--side-line-strong);
     border-radius: 10px;
     padding: 1px 7px;
   }
   .divider {
     height: 1px;
-    background: #323946;
+    background: var(--side-line);
     margin: 10px 4px;
   }
   .spacer {
     flex: 1 1 auto;
   }
   .server {
-    border: 1px solid #323946;
+    border: 1px solid var(--side-line);
     border-radius: 10px;
     padding: 12px;
     display: flex;
@@ -236,7 +236,7 @@
   .path {
     font-family: var(--mono);
     font-size: 11px;
-    color: #c3c8d0;
+    color: var(--side-item);
     word-break: break-all;
   }
   .btns {
@@ -247,7 +247,7 @@
     flex: 1 1 auto;
     background: transparent;
     color: var(--side-text);
-    border: 1px solid #3a4150;
+    border: 1px solid var(--side-line-strong);
     border-radius: 7px;
     padding: 7px 10px;
     font-size: 12px;

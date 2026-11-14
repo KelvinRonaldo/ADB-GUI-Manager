@@ -22,7 +22,9 @@
   import CaptureDialog from './components/CaptureDialog.svelte';
   import { cap } from './lib/capture.svelte';
   import { initUpdates, upd } from './lib/update.svelte';
-  import { app, boot, startPageGuide, startTour } from './lib/state.svelte';
+  import { app, boot, deviceName, startPageGuide, startTour } from './lib/state.svelte';
+  import { api } from './lib/ipc';
+  import { lang, t } from './lib/i18n.svelte';
   import type { Page } from './lib/types';
 
   let bootError = $state('');
@@ -47,6 +49,15 @@
   $effect(() => {
     // O tour só começa depois de escolhido o idioma.
     if (app.booted && app.settings.language && app.adb && !app.settings.tourDone && !app.tour.active && !app.tour.done) startTour();
+  });
+
+  // Menu da bandeja no idioma da interface, com o alvo atual.
+  $effect(() => {
+    if (!app.booted) return;
+    void lang.current;
+    const d = app.devices.find((x) => x.serial === app.settings.targetSerial);
+    const target = d ? t('tray.target', { name: deviceName(d.serial), conn: t(`conn.${d.connection}`) }) : t('tray.noTarget');
+    api.trayUpdate(t('tray.show'), target, t('tray.quit')).catch(() => {});
   });
 
   function onkey(e: KeyboardEvent) {

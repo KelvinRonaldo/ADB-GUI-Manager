@@ -1,4 +1,5 @@
-:root {
+:root,
+.pal-classic-light {
   --font: Inter, 'Segoe UI', Ubuntu, Cantarell, 'Noto Sans', system-ui, sans-serif;
   --mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, 'DejaVu Sans Mono', 'Liberation Mono', monospace;
   --radius: 10px;
@@ -21,6 +22,10 @@
   --side-muted: #9aa1ad;
   --side-hover: #2a303a;
   --side-active: #323946;
+  --side-item: #c3c8d0;
+  --side-strong: #ffffff;
+  --side-line: #323946;
+  --side-line-strong: #3a4150;
   --term-bg: #16191f;
   --term-text: #d6dae1;
   --term-border: #2a2f38;
@@ -43,7 +48,8 @@
   --scrim: rgba(15, 23, 42, 0.6);
 }
 
-:root[data-theme='dark'] {
+:root[data-theme='dark'],
+.pal-classic-dark {
   color-scheme: dark;
   --bg: #111418;
   --surface: #1a1e24;
@@ -82,6 +88,118 @@
   --emu-fg: #99f6e4;
   --shadow: 0 12px 28px rgba(0, 0, 0, 0.5);
   --scrim: rgba(0, 0, 0, 0.65);
+}
+
+/* Temas extras (Configurações › Aparência). O modo continua em data-theme; a paleta, em
+   data-palette. As classes .pal-* servem às prévias da tela de Configurações. */
+:root[data-theme='light'][data-palette='lavender'],
+.pal-lavender {
+  --bg: #f3effc;
+  --surface: #ffffff;
+  --surface-2: #f3effc;
+  --surface-3: #e9e2f8;
+  --border: #ddd3f3;
+  --border-strong: #c7b8ea;
+  --text: #241a3a;
+  --muted: #62577a;
+  --accent: #6d28d9;
+  --accent-hover: #5b21b6;
+  --accent-soft: #ede5fd;
+  --accent-border: #c4b5fd;
+  --on-accent: #ffffff;
+  --side-bg: #e4dafa;
+  --side-text: #2e1f52;
+  --side-muted: #6b5a92;
+  --side-hover: #d8cbf6;
+  --side-active: #cbbaf3;
+  --side-item: #4a3a72;
+  --side-strong: #1d1238;
+  --side-line: #cbbaf3;
+  --side-line-strong: #b7a2ec;
+}
+
+:root[data-theme='light'][data-palette='sun'],
+.pal-sun {
+  --bg: #fdf6e7;
+  --surface: #fffdf8;
+  --surface-2: #fdf6e7;
+  --surface-3: #f6ead0;
+  --border: #ecdcb8;
+  --border-strong: #dcc597;
+  --text: #2f2310;
+  --muted: #75603c;
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-soft: #fdebd8;
+  --accent-border: #fdba8c;
+  --on-accent: #ffffff;
+  --side-bg: #4a2a10;
+  --side-text: #fbe9cf;
+  --side-muted: #d2b48e;
+  --side-hover: #5c3616;
+  --side-active: #6b3f1b;
+  --side-item: #ead2b0;
+  --side-strong: #fffaf0;
+  --side-line: #6b3f1b;
+  --side-line-strong: #7d4b22;
+}
+
+:root[data-theme='dark'][data-palette='forest'],
+.pal-forest {
+  color-scheme: dark;
+  --bg: #10291d;
+  --surface: #173826;
+  --surface-2: #12301f;
+  --surface-3: #1f4a33;
+  --border: #2a5a40;
+  --border-strong: #367252;
+  --text: #e3f6ea;
+  --muted: #9cc7ad;
+  --accent: #3ddc84;
+  --accent-hover: #6ee7a4;
+  --accent-soft: #1f4a33;
+  --accent-border: #2f7a50;
+  --on-accent: #0b2a18;
+  --side-bg: #145c36;
+  --side-text: #e3f6ea;
+  --side-muted: #a7d6b8;
+  --side-hover: #1a6b40;
+  --side-active: #1f7a4a;
+  --side-item: #c9ead6;
+  --side-strong: #ffffff;
+  --side-line: #1f7a4a;
+  --side-line-strong: #2a8a56;
+  --term-bg: #0a1c13;
+  --term-border: #1f4a33;
+}
+
+:root[data-theme='dark'][data-palette='plum'],
+.pal-plum {
+  color-scheme: dark;
+  --bg: #2a1430;
+  --surface: #3a1d42;
+  --surface-2: #321838;
+  --surface-3: #4d2353;
+  --border: #5a3263;
+  --border-strong: #6e3f78;
+  --text: #f8e8f5;
+  --muted: #d4aed0;
+  --accent: #ff7ac0;
+  --accent-hover: #ff9fd2;
+  --accent-soft: #4d2353;
+  --accent-border: #8a3a6e;
+  --on-accent: #3a0a22;
+  --side-bg: #4a1650;
+  --side-text: #f8e8f5;
+  --side-muted: #d6a9d4;
+  --side-hover: #5a1c61;
+  --side-active: #6a2672;
+  --side-item: #ecc9e8;
+  --side-strong: #ffffff;
+  --side-line: #6a2672;
+  --side-line-strong: #7a3082;
+  --term-bg: #1c0b20;
+  --term-border: #4d2353;
 }
 
 * {

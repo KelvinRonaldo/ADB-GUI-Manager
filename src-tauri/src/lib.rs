@@ -11,6 +11,7 @@ mod settings;
 mod state;
 mod stream;
 mod tracker;
+mod tray;
 mod update;
 
 use state::AppState;
@@ -100,7 +101,22 @@ pub fn run() {
             app.manage(state);
             #[cfg(feature = "portable")]
             create_portable_window(app, portable.as_deref())?;
+            tray::init(app.handle());
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            // "Ao fechar a janela: manter na bandeja": o X esconde; o app sai pelo menu da bandeja.
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let keep = window
+                    .app_handle()
+                    .try_state::<Arc<AppState>>()
+                    .map(|st| st.settings().close_to_tray)
+                    .unwrap_or(false);
+                if keep && tray::TRAY_OK.load(std::sync::atomic::Ordering::SeqCst) {
+                    api.prevent_close();
+                    let _ = window.hide();
+                }
+            }
         })
         .invoke_handler(tauri::generate_handler![
             commands::app_init,
@@ -144,6 +160,8 @@ pub fn run() {
             commands::mirror_start,
             commands::mirror_control,
             commands::mirror_stop,
+            tray::tray_update,
+            tray::tray_available,
         ])
         .build(tauri::generate_context!())
         .expect("erro ao iniciar o ADB GUI Manager");
