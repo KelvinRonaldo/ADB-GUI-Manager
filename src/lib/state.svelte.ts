@@ -126,7 +126,10 @@ export function saveSettings(): void {
   }, 300);
 }
 
-export function applyTheme(): void {
+/** Só a janela principal avisa as outras quando o tema muda. */
+const isMainWindow = typeof location === 'undefined' || !new URLSearchParams(location.search).has('window');
+
+export function applyTheme(broadcast = isTauri && isMainWindow): void {
   const s = app.settings.theme;
   const dark = s === 'dark' || (s === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
   const root = document.documentElement;
@@ -135,9 +138,32 @@ export function applyTheme(): void {
   // Barra de título da janela (Windows) no mesmo modo do app.
   if (isTauri) {
     import('@tauri-apps/api/window')
-      .then(({ getCurrentWindow }) => getCurrentWindow().setTheme(s === 'system' ? null : dark ? 'dark' : 'light'))
+      .then(async ({ getCurrentWindow }) => {
+        const w = getCurrentWindow();
+        await w.setTheme(s === 'system' ? null : dark ? 'dark' : 'light');
+        await repaintTitleBar(w);
+      })
       .catch(() => {});
   }
+  if (broadcast) {
+    // A janela destacada do espelho acompanha o tema da principal.
+    import('@tauri-apps/api/event')
+      .then(({ emit }) => emit('app-theme', { theme: s, lightTheme: app.settings.lightTheme, darkTheme: app.settings.darkTheme }))
+      .catch(() => {});
+  }
+}
+
+/**
+ * O Windows só redesenha a barra de título no próximo redimensionamento: sem isso ela
+ * fica no modo antigo até mexer na janela. Um pixel a mais e de volta força o redesenho.
+ */
+async function repaintTitleBar(w: import('@tauri-apps/api/window').Window): Promise<void> {
+  if (app.init?.os !== 'windows') return;
+  if ((await w.isMaximized()) || (await w.isFullscreen()) || (await w.isMinimized())) return;
+  const { PhysicalSize } = await import('@tauri-apps/api/dpi');
+  const size = await w.innerSize();
+  await w.setSize(new PhysicalSize(size.width + 1, size.height));
+  await w.setSize(new PhysicalSize(size.width, size.height));
 }
 
 export function setLanguage(l: Settings['language']): void {
@@ -475,7 +501,7 @@ export async function boot(): Promise<void> {
     await listen<{ devices: Device[]; first: boolean }>('devices', (e) => onDevices(e.devices, e.first));
     await listen<LogEntry>('cmdlog', onLog);
     await listen<{ running: boolean }>('server', (p) => (app.serverRunning = p.running));
-    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
     setInterval(tick, 1000);
     setInterval(checkServer, 5000);
   }

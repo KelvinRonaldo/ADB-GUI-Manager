@@ -1,7 +1,7 @@
 <script lang="ts">
   // Espelhamento da tela pelo scrcpy-server embutido: vídeo decodificado aqui (WebCodecs),
   // toques, rolagem e teclas voltam para o aparelho. Também em tela cheia e numa janela destacada.
-  import { onDestroy, onMount, tick } from 'svelte';
+  import { onDestroy, tick } from 'svelte';
   import TopBar from '../components/TopBar.svelte';
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import ErrorState from '../components/ErrorState.svelte';
@@ -156,15 +156,15 @@
     if (s.mirrorId != null && serial !== s.serial) s.stop();
   });
 
-  onMount(async () => {
-    // Voltou da janela destacada: retoma aqui o espelho do mesmo aparelho.
+  // Voltou da janela destacada (pelo Mais dela ou pelo botão daqui): retoma aqui o espelho do
+  // mesmo aparelho. Vale com a página já aberta, por isso não fica só na montagem.
+  $effect(() => {
     const p = pending.serial;
-    if (!p) return;
+    if (!p || detached.open) return;
     pending.serial = '';
     if (findDevice(p)?.stateKind !== 'device') return;
-    if (serial !== p) setTarget(p);
-    await tick();
-    start();
+    if (targetSerial() !== p) setTarget(p);
+    tick().then(start);
   });
   onDestroy(() => {
     clearTimeout(hideTimer);

@@ -11,7 +11,8 @@
   import type { MoreItem } from './components/MirrorMore.svelte';
   import { t } from './lib/i18n.svelte';
   import { api, isTauri, listen } from './lib/ipc';
-  import { adoptInit, app, deviceName, loadCurrentDevices } from './lib/state.svelte';
+  import { adoptInit, app, applyTheme, deviceName, loadCurrentDevices } from './lib/state.svelte';
+  import type { Settings } from './lib/types';
   import { KEY, notificationsMsg, rotateMsg, type Quality } from './lib/mirror';
   import { MirrorSession } from './lib/mirrorSession.svelte';
   import { EV_CAPTURE, EV_DOCK, EV_DOCK_REQUEST, EV_STATE, emitTo, windowSize } from './lib/mirrorWindow';
@@ -115,15 +116,33 @@
       win().then(async (wi) => {
         const { LogicalSize } = await import('@tauri-apps/api/dpi');
         await wi.setSize(new LogicalSize(sz.width, sz.height)).catch(() => undefined);
+        await keepOnScreen();
       });
     }
     lastRatio = r;
   });
 
+  /** Depois de crescer (girar o aparelho), a janela não pode passar da área de trabalho do monitor. */
+  async function keepOnScreen() {
+    const { currentMonitor } = await import('@tauri-apps/api/window');
+    const { PhysicalPosition } = await import('@tauri-apps/api/dpi');
+    const w = await win();
+    const m = await currentMonitor();
+    if (!m) return;
+    const area = m.workArea ?? { position: m.position, size: m.size };
+    const pos = await w.outerPosition();
+    const size = await w.outerSize();
+    const maxX = area.position.x + area.size.width - size.width;
+    const maxY = area.position.y + area.size.height - size.height;
+    const x = Math.max(area.position.x, Math.min(pos.x, maxX));
+    const y = Math.max(area.position.y, Math.min(pos.y, maxY));
+    if (x !== pos.x || y !== pos.y) await w.setPosition(new PhysicalPosition(x, y)).catch(() => undefined);
+  }
+
   // Título com o nome do aparelho no idioma do app.
   $effect(() => {
     if (!booted) return;
-    const title = t('mirror.windowTitle', { name: s.devName || deviceName(serial) });
+    const title = t('mirror.windowTitle', { name: deviceName(serial) });
     document.title = title;
     if (isTauri) win().then((w) => w.setTitle(title).catch(() => undefined));
   });
@@ -139,6 +158,13 @@
       return;
     }
     await listen(EV_DOCK_REQUEST, () => close(true));
+    await listen<{ theme: Settings['theme']; lightTheme: Settings['lightTheme']; darkTheme: Settings['darkTheme'] }>('app-theme', (p) => {
+      app.settings.theme = p.theme;
+      app.settings.lightTheme = p.lightTheme;
+      app.settings.darkTheme = p.darkTheme;
+      applyTheme(false);
+    });
+    window.matchMedia?.('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(false));
     if (isTauri) {
       (await win()).onCloseRequested(async (e) => {
         e.preventDefault();
