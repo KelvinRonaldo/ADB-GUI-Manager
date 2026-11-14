@@ -4,7 +4,7 @@ version = 3
 
 [[package]]
 name = "adb-gui-manager"
-version = "0.3.14"
+version = "0.3.16"
 dependencies = [
  "base64 0.22.1",
  "futures-util",
