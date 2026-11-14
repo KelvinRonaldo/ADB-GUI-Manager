@@ -18,3 +18,9 @@
 ; cortam em 125% e usam "pra").
 !define MUI_DIRECTORYPAGE_TEXT_TOP "$(adbDirTop)"
 !define MUI_UNCONFIRMPAGE_TEXT_TOP "$(adbUnTop)"
+
+; Depois de instalar, pede ao Explorer para recarregar os ícones: sem isso a barra de tarefas
+; continua com o ícone antigo em cache para o mesmo caminho do .exe (visto ao atualizar da 0.3.x).
+!macro NSIS_HOOK_POSTINSTALL
+  System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0x1000, p 0, p 0)'
+!macroend
