@@ -17,6 +17,8 @@ export const cap = $state({
   at: 0,
   copied: false,
   savedTo: '',
+  /** Pedida pela janela destacada em "Sempre visível": a prévia sobe por cima dela. */
+  above: false,
 });
 
 export async function openCapture(serial: string): Promise<void> {
@@ -85,6 +87,7 @@ async function discard(): Promise<void> {
 export async function closeCapture(): Promise<void> {
   if (cap.busy) return;
   cap.open = false;
+  cap.above = false;
   cap.info = null;
   await discard();
 }

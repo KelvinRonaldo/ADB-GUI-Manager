@@ -86,7 +86,7 @@
           { divider: true },
         ] as MoreItem[])
       : []),
-    { icon: 'camera', label: t('mirror.k.capture'), onclick: () => emitTo(EV_CAPTURE, { serial }) },
+    { icon: 'camera', label: t('mirror.k.capture'), onclick: () => emitTo(EV_CAPTURE, { serial, onTop }) },
     full
       ? { icon: 'exitFullscreen', label: t('mirror.exitFullscreen'), onclick: () => setFull(false) }
       : { icon: 'fullscreen', label: t('mirror.fullscreen'), onclick: () => setFull(true) },

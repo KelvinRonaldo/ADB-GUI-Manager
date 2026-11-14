@@ -3,7 +3,7 @@
 import { isTauri, listen } from './ipc';
 import { t } from './i18n.svelte';
 import { deviceName, navigate } from './state.svelte';
-import { openCapture } from './capture.svelte';
+import { cap, openCapture } from './capture.svelte';
 import { detached, pending } from './mirrorSession.svelte';
 
 export const MIRROR_LABEL = 'mirror';
@@ -12,7 +12,7 @@ export const MIRROR_LABEL = 'mirror';
 export const EV_STATE = 'mirror-window'; // { open, serial } — janela destacada abriu ou fechou
 export const EV_DOCK = 'mirror-dock'; // { serial } — voltar o espelho para dentro do app
 export const EV_DOCK_REQUEST = 'mirror-dock-request'; // a principal pede a volta
-export const EV_CAPTURE = 'mirror-capture'; // { serial } — captura de tela pela principal
+export const EV_CAPTURE = 'mirror-capture'; // { serial, onTop } — captura de tela pela principal
 
 export function isMirrorWindow(): boolean {
   return typeof location !== 'undefined' && new URLSearchParams(location.search).get('window') === MIRROR_LABEL;
@@ -102,7 +102,8 @@ export async function initMirrorWindowEvents(): Promise<void> {
     navigate('mirror');
     await showMain();
   });
-  await listen<{ serial: string }>(EV_CAPTURE, async (p) => {
+  await listen<{ serial: string; onTop?: boolean }>(EV_CAPTURE, async (p) => {
+    cap.above = !!p.onTop;
     await showMain();
     openCapture(p.serial);
   });

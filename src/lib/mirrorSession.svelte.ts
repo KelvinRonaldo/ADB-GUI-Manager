@@ -143,7 +143,10 @@ export class MirrorSession {
     if (p.config) {
       const c = avcCodec(p.data);
       if (!c) return this.fail(decoderError('SPS não encontrado no pacote de configuração'));
-      const keep = this.codec === c && this.decoder;
+      // Só reaproveita o decodificador se o SPS/PPS for o mesmo. Girar o aparelho muda a resolução
+      // sem mudar o perfil: o WebKitGTK (Linux) seguia soltando quadros no tamanho antigo, com a
+      // imagem deitada espremida dentro do quadro em pé.
+      const keep = this.codec === c && this.decoder && sameBytes(this.config, p.data);
       if (!keep) this.makeDecoder(c);
       this.config = p.data.slice();
       this.needKey = true;
@@ -270,3 +273,9 @@ export class MirrorSession {
 export const detached = $state({ open: false, serial: '' });
 /** Pedido para a página começar o espelho ao abrir (volta da janela destacada). */
 export const pending = $state({ serial: '' });
+
+function sameBytes(a: Uint8Array | null, b: Uint8Array): boolean {
+  if (!a || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
