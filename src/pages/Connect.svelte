@@ -25,6 +25,8 @@
   let pairAddress = $state('');
   let pairCode = $state('');
   let connectPort = $state('');
+  // O adb não pareia sem a porta ("Invalid port") e ainda sai com 0; barra antes de rodar.
+  const pairNeedsPort = $derived(pairAddress.trim() !== '' && !/:\d+$/.test(pairAddress.trim()));
   let status = $state('');
   let busy = $state(false);
   let wifiError = $state<AdbError | null>(null);
@@ -235,11 +237,14 @@
             >
               <div class="muted">{t('connect.pairHint')}</div>
               <div class="two">
-                <label class="field">{t('connect.pairAddress')}<input class="input mono" placeholder="192.168.0.57:37215" bind:value={pairAddress} /></label>
+                <label class="field"
+                  >{t('connect.pairAddress')}<input class="input mono" class:bad={pairNeedsPort} placeholder="192.168.0.57:37215" aria-invalid={pairNeedsPort} bind:value={pairAddress} />
+                  {#if pairNeedsPort}<span class="field-note">{t('connect.pairNeedsPort')}</span>{/if}</label
+                >
                 <label class="field">{t('connect.pairCode')}<input id="pair-code" class="input mono" inputmode="numeric" placeholder="482193" bind:value={pairCode} /></label>
               </div>
               <label class="field">{t('connect.connectPort')}<input class="input mono" inputmode="numeric" placeholder="41235" bind:value={connectPort} /></label>
-              <button type="submit" class="btn primary" disabled={busy || !pairAddress.trim() || !pairCode.trim()}>{t('common.pair')}</button>
+              <button type="submit" class="btn primary" disabled={busy || !pairAddress.trim() || pairNeedsPort || !pairCode.trim()}>{t('common.pair')}</button>
               <div class="mono muted small">adb pair {pairAddress || 'HOST:PORT'} {pairCode.replace(/\s/g, '') || 'CODE'} → adb connect …</div>
             </form>
             <div class="qr">
@@ -409,6 +414,13 @@
     cursor: pointer;
     font-weight: 600;
     color: var(--accent);
+  }
+  .input.bad {
+    border-color: var(--err-fg);
+  }
+  .field-note {
+    font-weight: 400;
+    color: var(--err-fg);
   }
   .pair {
     display: flex;

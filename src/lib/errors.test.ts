@@ -55,6 +55,12 @@ describe('classify', () => {
     const e = classify(r('adb pair 192.168.0.57:37215 123456', 1, 'Failed: Unable to start pairing client.\n'))!;
     expect(e.kind).toBe('pairFailed');
   });
+  it('pareamento sem a porta: o adb sai com 0 mas não pareou', () => {
+    const e = classify(r('adb pair 192.168.207.37 517742', 0, 'Invalid port while parsing address [192.168.207.37]\n'))!;
+    expect(e.kind).toBe('pairPort');
+    expect(classify(r('adb pair 192.168.0.57:37215 123456', 0, 'Failed: Unable to start pairing client.\n'))!.kind).toBe('pairFailed');
+    expect(classify(r('adb pair 192.168.0.57:37215 123456', 0, 'Successfully paired to 192.168.0.57:37215 [guid=adb-X]\n'))).toBeNull();
+  });
   it('não autorizado, offline e mais de um aparelho', () => {
     expect(classify(r('adb shell ls', 1, '', 'adb: device unauthorized.\nThis adb server\'s $ADB_VENDOR_KEYS is not set'))!.kind).toBe('unauthorized');
     expect(classify(r('adb shell ls', 1, '', 'adb: device offline'))!.kind).toBe('offline');

@@ -15,6 +15,7 @@ export type ErrorKind =
   | 'connectTimeout'
   | 'connectFailed'
   | 'pairFailed'
+  | 'pairPort'
   | 'serverStart'
   | 'serverVersion'
   | 'versionDowngrade'
@@ -108,7 +109,8 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   const op = ctx.op ?? (/\binstall(-multiple|-multi-package)?\b/.test(r.cmd) ? 'install' : /\bpair\b/.test(r.cmd) ? 'pair' : /\bconnect\b/.test(r.cmd) && !/\bdisconnect\b/.test(r.cmd) ? 'connect' : 'generic');
   const installCode = text.match(/\b(INSTALL_(?:FAILED|PARSE_FAILED)_[A-Z_]+)\b/)?.[1];
   const connectFailed = op === 'connect' && /(failed to connect|cannot connect|unable to connect|failed to authenticate|connection refused)/.test(low);
-  const pairFailed = op === 'pair' && /(failed|error|wrong password|protocol fault|unable)/.test(low) && !/successfully paired/.test(low);
+  // `adb pair` sai com 0 mesmo falhando ("Invalid port…", "Failed: …"): só vale o "Successfully paired".
+  const pairFailed = op === 'pair' && !/successfully paired/.test(low);
   const installFailed = !!installCode || (op === 'install' && /failure \[|failed to install/.test(low));
   if (r.code === 0 && !r.timedOut && !connectFailed && !pairFailed && !installFailed) return null;
 
@@ -134,6 +136,7 @@ export function classify(input: RunResult | string, ctx: ClassifyContext = {}): 
   if (/device offline|error: device offline/.test(low)) return make('offline', ['reconnect', 'retry']);
   if (/device '.*' not found|device not found|no devices\/emulators found|device still connecting|no devices found/.test(low))
     return make('deviceNotFound', ['reconnect', 'retry', 'chooseDevice']);
+  if (op === 'pair' && /invalid port|missing port/.test(low)) return make('pairPort', ['pairAgain']);
   if (op === 'pair' && pairFailed) return make('pairFailed', ['pairAgain', 'retry']);
   if (/cannot bind|could not install \*smartsocket\*|failed to start daemon|daemon still not running|cannot connect to daemon/.test(low))
     return make('serverStart', ['restartServer', 'openSettings']);
