@@ -414,6 +414,7 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
     case 'mdns_services':
       return [
         { name: 'adb-7A1B2C3D-xyz', service: '_adb-tls-pairing._tcp', address: '192.168.0.57:37215' },
+        { name: 'adb-7A1B2C3D-xyz', service: '_adb-tls-connect._tcp', address: '192.168.0.57:41987' },
         { name: 'adb-P2-0042', service: '_adb-tls-connect._tcp', address: '192.168.0.42:41235' },
       ];
     case 'remote_list': {

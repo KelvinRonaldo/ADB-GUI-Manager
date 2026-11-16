@@ -24,7 +24,18 @@
   // Wi-Fi
   let pairAddress = $state('');
   let pairCode = $state('');
-  let connectPort = $state('');
+  // Pareamento em dois passos: parear e depois conectar. A porta de conexão muitas vezes só aparece no aparelho
+  // depois que a janela "Parear com código" fecha, então ela é pedida (ou achada na rede) só no segundo passo.
+  type PStep = 'pair' | 'connect' | 'done';
+  let pstep = $state<PStep>('pair');
+  let connHost = $state('');
+  let connHostLocked = $state(false);
+  let connPort = $state('');
+  let autoConnect = $state(false);
+  let searchUntil = 0;
+  let connectedAt = $state('');
+  // O adb não pareia sem a porta ("Invalid port") e ainda sai com 0; barra antes de rodar.
+  const pairNeedsPort = $derived(pairAddress.trim() !== '' && !/:\d+$/.test(pairAddress.trim()));
   let status = $state('');
   let busy = $state(false);
   let wifiError = $state<AdbError | null>(null);
@@ -41,6 +52,17 @@
 
   let mdns = $state<MdnsService[]>([]);
   let poll: ReturnType<typeof setInterval> | undefined;
+  let polling = false;
+
+  const isPairSvc = (s: MdnsService) => s.service.startsWith('_adb-tls-pairing');
+  const isConnSvc = (s: MdnsService) => s.service.startsWith('_adb-tls-connect');
+  const hostOf = (a: string) => a.split(':')[0];
+  const portOf = (a: string) => a.split(':')[1] ?? '';
+  // Endereço de pareamento anunciado enquanto a janela "Parear com código" está aberta no aparelho.
+  const pairOffers = $derived(mdns.filter((s) => isPairSvc(s) && s.name !== qrName && s.address !== pairAddress.trim()).slice(0, 2));
+  const connOffers = $derived(
+    mdns.filter((s) => isConnSvc(s) && (!connHostLocked || hostOf(s.address) === connHost) && s.address !== `${connHost}:${connPort}`).slice(0, 3),
+  );
   let offStream: (() => void) | undefined;
 
   const usbDevices = $derived(readyDevices().filter((d) => d.connection === 'usb'));
@@ -58,10 +80,14 @@
   }
 
   async function pollMdns() {
+    if (polling) return;
+    polling = true;
     try {
-      mdns = await api.mdns(true);
+      mdns = await api.mdns(true, pstep === 'connect' && connHost ? [connHost] : []);
     } catch {
       mdns = [];
+    } finally {
+      polling = false;
     }
     // QR: o aparelho anuncia o serviço de pareamento com o nome do código lido.
     const svc = mdns.find((s) => s.service.startsWith('_adb-tls-pairing') && s.name === qrName);
@@ -71,6 +97,14 @@
       await doPair(svc.address, qrPass);
       await newQr();
       qrBusy = false;
+    }
+    // Passo 2 logo depois do pareamento: achou a porta de conexão do mesmo IP, conecta sozinho.
+    if (pstep === 'connect' && autoConnect && !busy) {
+      const svc = mdns.find((s) => isConnSvc(s) && hostOf(s.address) === connHost);
+      if (svc) {
+        connPort = portOf(svc.address);
+        await doConnect();
+      } else if (Date.now() > searchUntil) autoConnect = false;
     }
   }
 
@@ -127,26 +161,75 @@
       const r = await api.run(['pair', address, code], { timeoutMs: 30000 });
       const err = classify(r, { op: 'pair', address });
       if (err) return fail(err, () => doPair(address, code));
-      status = t('connect.paired');
-      const host = address.split(':')[0];
-      if (connectPort.trim()) {
-        await finishConnect(`${host}:${connectPort.trim()}`);
-        return;
-      }
-      // A porta de conexão aparece no mDNS logo depois do pareamento.
-      for (let i = 0; i < 8; i++) {
-        const list = await api.mdns(true).catch(() => [] as MdnsService[]);
-        const svc = list.find((s) => s.service.startsWith('_adb-tls-connect') && s.address.split(':')[0] === host);
-        if (svc) {
-          await finishConnect(svc.address, svc.name);
-          return;
-        }
-        await new Promise((res) => setTimeout(res, 1500));
-      }
-      status = t('connect.connectPortHint');
+      status = '';
+      pstep = 'connect';
+      connHost = hostOf(address);
+      connHostLocked = true;
+      connPort = '';
+      autoConnect = true;
+      searchUntil = Date.now() + 60_000;
     } finally {
       busy = false;
     }
+    pollMdns();
+  }
+
+  async function doConnect() {
+    let host = connHost.trim();
+    let port = connPort.trim();
+    if (!port && host.includes(':')) [host, port] = [hostOf(host), portOf(host)];
+    if (!host || !port) return;
+    const address = `${host}:${port}`;
+    wifiError = null;
+    autoConnect = false;
+    busy = true;
+    try {
+      const { ok, error } = await connectAddress(address);
+      if (ok) {
+        addRecent(address, address);
+        toast(t('connect.connected', { address }), 'success');
+        connectedAt = address;
+        pstep = 'done';
+      } else if (error) fail(error, doConnect);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function usePairOffer(s: MdnsService) {
+    pairAddress = s.address;
+    document.getElementById('pair-code')?.focus();
+  }
+
+  function useConnOffer(s: MdnsService) {
+    connHost = hostOf(s.address);
+    connPort = portOf(s.address);
+    doConnect();
+  }
+
+  function onlyConnect() {
+    wifiError = null;
+    autoConnect = false;
+    connHostLocked = false;
+    connHost = '';
+    connPort = '';
+    pstep = 'connect';
+  }
+
+  function backToPair() {
+    wifiError = null;
+    autoConnect = false;
+    pstep = 'pair';
+  }
+
+  function pairAnother() {
+    pairAddress = '';
+    pairCode = '';
+    connHost = '';
+    connPort = '';
+    connectedAt = '';
+    connHostLocked = false;
+    backToPair();
   }
 
   function doUsbToWifi() {
@@ -172,6 +255,7 @@
   function useMdns(s: MdnsService) {
     if (s.service.startsWith('_adb-tls-pairing')) {
       wtab = 'pair';
+      backToPair();
       pairAddress = s.address;
       document.getElementById('pair-code')?.focus();
     } else {
@@ -225,31 +309,84 @@
         </div>
 
         {#if wtab === 'pair'}
-          <div class="pair">
+          <div class="steps">
+            <span class="step" class:on={pstep === 'pair'} class:done={pstep !== 'pair'}
+              ><i>{#if pstep !== 'pair'}<Icon name="check" size={12} stroke={2.6} />{:else}1{/if}</i>{t('connect.step.pair')}</span
+            >
+            <span class="bar"></span>
+            <span class="step" class:on={pstep === 'connect'} class:done={pstep === 'done'}
+              ><i>{#if pstep === 'done'}<Icon name="check" size={12} stroke={2.6} />{:else}2{/if}</i>{t('connect.step.connect')}</span
+            >
+          </div>
+          {#if pstep === 'pair'}
+            <div class="pair">
+              <form
+                class="form"
+                onsubmit={(e) => {
+                  e.preventDefault();
+                  doPair();
+                }}
+              >
+                <div class="muted">{t('connect.pairHint')}</div>
+                {#each pairOffers as s (s.address)}
+                  <div class="found">
+                    <div class="grow"><span class="mono">{s.address}</span> <span class="muted small">· {t('connect.pairOpen')}</span></div>
+                    <button type="button" class="btn sm outline" onclick={() => usePairOffer(s)}>{t('connect.use')}</button>
+                  </div>
+                {/each}
+                <div class="two">
+                  <label class="field"
+                    >{t('connect.pairAddress')}<input class="input mono" class:bad={pairNeedsPort} placeholder="192.168.0.57:37215" aria-invalid={pairNeedsPort} bind:value={pairAddress} />
+                    {#if pairNeedsPort}<span class="field-note">{t('connect.pairNeedsPort')}</span>{/if}</label
+                  >
+                  <label class="field">{t('connect.pairCode')}<input id="pair-code" class="input mono" inputmode="numeric" placeholder="482193" bind:value={pairCode} /></label>
+                </div>
+                <button type="submit" class="btn primary" disabled={busy || !pairAddress.trim() || pairNeedsPort || !pairCode.trim()}>{t('common.pair')}</button>
+                <div class="mono muted small">adb pair {pairAddress || 'HOST:PORT'} {pairCode.replace(/\s/g, '') || 'CODE'}</div>
+                <div class="muted small">{t('connect.alreadyPaired')} <button type="button" class="linkbtn" onclick={onlyConnect}>{t('connect.onlyConnect')}</button></div>
+              </form>
+              <div class="qr">
+                <div class="strong small">{t('connect.qrTitle')}</div>
+                {#if qrImg}<img src={qrImg} alt={t('connect.qrTitle')} width="160" height="160" />{/if}
+                <div class="muted small center">{t('connect.qrHint')}</div>
+                <div class="muted small center">{t('connect.qrWaiting')}</div>
+                <button type="button" class="linkbtn small" onclick={newQr}>{t('connect.qrNew')}</button>
+              </div>
+            </div>
+          {:else if pstep === 'connect'}
             <form
               class="form"
               onsubmit={(e) => {
                 e.preventDefault();
-                doPair();
+                doConnect();
               }}
             >
-              <div class="muted">{t('connect.pairHint')}</div>
+              {#if connHostLocked}<div class="banner ok"><Icon name="check" size={16} stroke={2.4} /><span>{t('connect.pairedWith', { host: connHost })}</span></div>{/if}
+              {#if autoConnect}<div class="banner info" role="status"><Icon name="spinner" size={16} class="spin" /><span>{t('connect.searchingPort')}</span></div>{/if}
+              {#each autoConnect ? [] : connOffers as s (s.address)}
+                <div class="found">
+                  <div class="grow"><span class="mono">{s.address}</span> <span class="muted small">· {t('connect.onNetwork', { name: s.name })}</span></div>
+                  <button type="button" class="btn sm outline" disabled={busy} onclick={() => useConnOffer(s)}>{t('common.connect')}</button>
+                </div>
+              {/each}
               <div class="two">
-                <label class="field">{t('connect.pairAddress')}<input class="input mono" placeholder="192.168.0.57:37215" bind:value={pairAddress} /></label>
-                <label class="field">{t('connect.pairCode')}<input id="pair-code" class="input mono" inputmode="numeric" placeholder="482193" bind:value={pairCode} /></label>
+                <label class="field">{t('connect.ip')}<input class="input mono" placeholder="192.168.0.42" disabled={connHostLocked} bind:value={connHost} /></label>
+                <label class="field"
+                  >{t('connect.connectPortField')}<input class="input mono" inputmode="numeric" placeholder={t('connect.connectPortPh')} bind:value={connPort} oninput={() => (autoConnect = false)} /></label
+                >
               </div>
-              <label class="field">{t('connect.connectPort')}<input class="input mono" inputmode="numeric" placeholder="41235" bind:value={connectPort} /></label>
-              <button type="submit" class="btn primary" disabled={busy || !pairAddress.trim() || !pairCode.trim()}>{t('common.pair')}</button>
-              <div class="mono muted small">adb pair {pairAddress || 'HOST:PORT'} {pairCode.replace(/\s/g, '') || 'CODE'} → adb connect …</div>
+              <button type="submit" class="btn primary" disabled={busy || !connHost.trim() || !(connPort.trim() || connHost.includes(':'))}>{t('common.connect')}</button>
+              <div class="muted small">{t('connect.connectPortWhere')}</div>
+              <div class="mono muted small">adb connect {connHost || 'HOST'}:{connPort || 'PORT'}</div>
+              <div class="small"><button type="button" class="linkbtn" onclick={backToPair}>{t('connect.backToPair')}</button></div>
             </form>
-            <div class="qr">
-              <div class="strong small">{t('connect.qrTitle')}</div>
-              {#if qrImg}<img src={qrImg} alt={t('connect.qrTitle')} width="160" height="160" />{/if}
-              <div class="muted small center">{t('connect.qrHint')}</div>
-              <div class="muted small center">{t('connect.qrWaiting')}</div>
-              <button type="button" class="linkbtn small" onclick={newQr}>{t('connect.qrNew')}</button>
+          {:else}
+            <div class="form">
+              <div class="banner ok"><Icon name="check" size={16} stroke={2.4} /><span>{t('connect.connected', { address: connectedAt })}</span></div>
+              <div class="mono muted small">adb connect {connectedAt}</div>
+              <button type="button" class="btn outline start" onclick={pairAnother}>{t('connect.pairAnother')}</button>
             </div>
-          </div>
+          {/if}
         {:else if wtab === 'usb'}
           <div class="form">
             <div class="muted">{t('connect.usbHint')}</div>
@@ -288,7 +425,7 @@
 
         {#if status}<div class="status" role="status"><Icon name="spinner" size={16} class={busy ? 'spin' : ''} /> {status}</div>{/if}
         {#if wifiError}
-          <ErrorState error={wifiError} onretry={() => lastAction?.()} handlers={{ pairAgain: () => ((wtab = 'pair'), (wifiError = null)) }} />
+          <ErrorState error={wifiError} onretry={() => lastAction?.()} handlers={{ pairAgain: () => ((wtab = 'pair'), backToPair()) }} />
         {/if}
 
         <div class="lists">
@@ -409,6 +546,87 @@
     cursor: pointer;
     font-weight: 600;
     color: var(--accent);
+  }
+  .input.bad {
+    border-color: var(--err-fg);
+  }
+  .field-note {
+    font-weight: 400;
+    color: var(--err-fg);
+  }
+  .steps {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+  .step {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+  }
+  .step i {
+    font-style: normal;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-size: 11.5px;
+    font-weight: 700;
+    border: 1.5px solid var(--border-strong);
+  }
+  .step.on {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .step.on i {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--on-accent);
+  }
+  .step.done i {
+    border-color: var(--ok-fg);
+    color: var(--ok-fg);
+  }
+  .steps .bar {
+    width: 28px;
+    height: 1.5px;
+    background: var(--border-strong);
+  }
+  .banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+  .banner.ok {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+  .banner.info {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .found {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    border-radius: 8px;
+    padding: 6px 6px 6px 10px;
+    font-size: 12.5px;
+  }
+  .found .grow {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  .start {
+    align-self: flex-start;
   }
   .pair {
     display: flex;

@@ -3,6 +3,7 @@ mod commands;
 mod download;
 mod files;
 mod locate;
+mod mdns;
 mod mirror;
 mod parse;
 mod pty;

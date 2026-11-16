@@ -14,7 +14,7 @@
 
   const actions = $derived(error.actions.filter(available));
   const icon = $derived(
-    ['deviceNotFound', 'offline'].includes(error.kind) ? 'unplugged' : ['connectRefused', 'connectTimeout', 'connectFailed', 'pairFailed'].includes(error.kind) ? 'wifiOff' : 'alert',
+    ['deviceNotFound', 'offline'].includes(error.kind) ? 'unplugged' : ['connectRefused', 'connectTimeout', 'connectFailed', 'pairFailed', 'pairPort'].includes(error.kind) ? 'wifiOff' : 'alert',
   );
 
   async function copy() {
