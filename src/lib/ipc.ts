@@ -85,7 +85,7 @@ export const api = {
   ptyResize: (id: number, cols: number, rows: number) => invoke<void>('pty_resize', { id, cols, rows }),
   ptyClose: (id: number) => invoke<void>('pty_close', { id }),
   summary: (serial: string, quiet = true) => invoke<Summary>('device_summary', { serial, quiet }),
-  mdns: (quiet = true) => invoke<MdnsService[]>('mdns_services', { quiet }),
+  mdns: (quiet = true, targets: string[] = []) => invoke<MdnsService[]>('mdns_services', { quiet, targets }),
   remoteList: (serial: string, path: string, runAs: string | null = null) =>
     invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path, runAs }),
   packages: (serial: string, filter: string) =>

@@ -185,10 +185,22 @@ pub async fn device_summary(app: AppHandle, st: St<'_>, serial: String, quiet: O
     })
 }
 
+/// Junta o `adb mdns services` com a busca própria do app (o adb de algumas distribuições não acha nada).
+/// `targets`: IPs de aparelhos que também recebem a pergunta direto (ex.: o recém-pareado).
 #[tauri::command]
-pub async fn mdns_services(app: AppHandle, st: St<'_>, quiet: Option<bool>) -> Result<Vec<MdnsService>, String> {
-    let r = runner::run(&app, &st, vec!["mdns".into(), "services".into()], RunOpts { serial: None, timeout_ms: Some(10_000), quiet: quiet.unwrap_or(true) }).await?;
-    Ok(parse::parse_mdns(&r.stdout))
+pub async fn mdns_services(app: AppHandle, st: St<'_>, quiet: Option<bool>, targets: Option<Vec<String>>) -> Result<Vec<MdnsService>, String> {
+    let ips: Vec<std::net::Ipv4Addr> = targets.unwrap_or_default().iter().filter_map(|t| t.split(':').next()?.parse().ok()).collect();
+    let (adb, own) = tokio::join!(
+        runner::run(&app, &st, vec!["mdns".into(), "services".into()], RunOpts { serial: None, timeout_ms: Some(10_000), quiet: quiet.unwrap_or(true) }),
+        crate::mdns::browse(&ips, std::time::Duration::from_millis(1500)),
+    );
+    let mut list = adb.map(|r| parse::parse_mdns(&r.stdout)).unwrap_or_default();
+    for s in own {
+        if !list.iter().any(|l| l.service.trim_end_matches('.') == s.service && l.address == s.address) {
+            list.push(s);
+        }
+    }
+    Ok(list)
 }
 
 #[derive(Serialize)]
