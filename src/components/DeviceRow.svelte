@@ -10,6 +10,7 @@
     deviceMenu,
     iconOf,
     openInstall,
+    openApps,
     openShell,
     stateChip,
     storageText,
@@ -127,8 +128,9 @@
       case 'device': {
         const lead: MenuItem[] = [];
         if (!isTarget) lead.push({ label: t('devices.useAsTarget'), onclick: () => setTarget(serial) });
+        if (variant === 'compact') lead.push({ label: t('nav.apps'), onclick: () => openApps(serial) });
+        lead.push({ label: t('devices.shell'), onclick: () => openShell(serial) });
         if (variant === 'compact') {
-          lead.push({ label: t('devices.shell'), onclick: () => openShell(serial) });
           lead.push({ label: t('devices.installApk'), onclick: () => openInstall(serial) });
         }
         return deviceMenu(serial, lead);
@@ -223,8 +225,8 @@
   <div class="acts" role="cell" data-guide={first ? 'devices-card-actions' : undefined}>
     {#if ready && variant === 'list'}
       <button type="button" class="btn sm outline" onclick={() => openDetails(serial)}>{t('devices.details')}</button>
-      <button type="button" class="btn sm icon" title={t('devices.shell')} aria-label={t('devices.shell')} onclick={() => openShell(serial)}>
-        <Icon name="shell" size={15} />
+      <button type="button" class="btn sm icon" title={t('nav.apps')} aria-label={t('nav.apps')} onclick={() => openApps(serial)}>
+        <Icon name="apps" size={15} />
       </button>
       <button type="button" class="btn sm icon" title={t('devices.installApk')} aria-label={t('devices.installApk')} onclick={() => openInstall(serial)}>
         <Icon name="download" size={15} />

@@ -62,6 +62,12 @@ export function openShell(serial: string): void {
   navigate('shell');
 }
 
+/** Atalho do aparelho para a tela Apps; ele vira o alvo. */
+export function openApps(serial: string): void {
+  setTarget(serial);
+  navigate('apps');
+}
+
 export function openInstall(serial: string): void {
   setTarget(serial);
   app.installRequest = true;

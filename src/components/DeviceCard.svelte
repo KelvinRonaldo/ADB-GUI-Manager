@@ -3,7 +3,7 @@
   import Menu from './Menu.svelte';
   import { t, type Key } from '../lib/i18n.svelte';
   import { androidLabel, friendlyName } from '../lib/format';
-  import { batteryText, deviceMenu, iconOf, openInstall, openShell, stateChip, storageText, toneOf, type ViewKind, serialOf } from '../lib/deviceView';
+  import { batteryText, deviceMenu, iconOf, openApps, openInstall, openShell, stateChip, storageText, toneOf, type ViewKind, serialOf } from '../lib/deviceView';
   import {
     app,
     clock,
@@ -46,7 +46,8 @@
     }
   }
 
-  const menu = $derived(device ? deviceMenu(serial) : []);
+  // O Shell saiu dos botões (o atalho agora é Apps) e fica no ⋯.
+  const menu = $derived(device ? deviceMenu(serial, [{ label: t('devices.shell'), onclick: () => openShell(serial) }]) : []);
   const iconName = $derived(iconOf(kind, conn));
   const tone = $derived(toneOf(kind, conn));
 </script>
@@ -106,7 +107,7 @@
     </dl>
     <div class="row acts" data-guide={first ? 'devices-card-actions' : undefined}>
       <button type="button" class="btn outline" onclick={() => openDetails(serial)}>{t('devices.details')}</button>
-      <button type="button" class="btn" onclick={() => openShell(serial)}>{t('devices.shell')}</button>
+      <button type="button" class="btn" onclick={() => openApps(serial)}>{t('nav.apps')}</button>
       <button type="button" class="btn" onclick={() => openInstall(serial)}>{t('devices.installApk')}</button>
       {#if !isTarget}
         <button type="button" class="btn ghost" onclick={() => setTarget(serial)}>{t('devices.useAsTarget')}</button>
