@@ -6,11 +6,21 @@
   import Icon from '../components/Icon.svelte';
   import { t } from '../lib/i18n.svelte';
   import { app, deviceName, hiddenByUsb, listedDevices, navigate, saveSettings } from '../lib/state.svelte';
+  import { serialOf } from '../lib/deviceView';
   import type { DevicesView } from '../lib/types';
 
   let filter = $state<'all' | 'usb' | 'wifi' | 'emulator'>('all');
+  let query = $state('');
+  const words = $derived(query.trim().toLowerCase().split(/\s+/).filter(Boolean));
+  /** Busca por nome, IP e serial (o do adb e o do terminal); cada palavra precisa aparecer. */
+  function matches(serial: string): boolean {
+    if (!words.length) return true;
+    const s = app.summaries[serial];
+    const hay = [deviceName(serial), serial, serialOf(serial), s?.wifiIp].filter(Boolean).join(' ').toLowerCase();
+    return words.every((w) => hay.includes(w));
+  }
   // Ligado por USB e Wi-Fi ao mesmo tempo: só o USB aparece; o Wi-Fi volta quando o cabo sai.
-  const listed = $derived(listedDevices());
+  const listed = $derived(listedDevices().filter((d) => matches(d.serial)));
   const counts = $derived({
     all: listed.length,
     usb: listed.filter((d) => d.connection === 'usb').length,
@@ -19,11 +29,14 @@
   });
   const shown = $derived(listed.filter((d) => filter === 'all' || d.connection === filter));
   const lost = $derived(
-    Object.values(app.lost).filter((l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi')),
+    Object.values(app.lost).filter(
+      (l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi') && matches(l.serial),
+    ),
   );
   // Entradas Wi-Fi ocultas porque o mesmo aparelho está no USB: avisa em vez de parecer que sumiram.
   const hiddenWifi = $derived(app.devices.filter((d) => d.connection === 'wifi' && hiddenByUsb(d.serial)));
-  const showHidden = $derived(hiddenWifi.length > 0 && (filter === 'all' || filter === 'wifi'));
+  const showHidden = $derived(hiddenWifi.length > 0 && (filter === 'all' || filter === 'wifi') && !words.length);
+  const anyDevice = $derived(app.devices.length > 0 || Object.keys(app.lost).length > 0);
   const hiddenTitle = $derived(
     hiddenWifi.length === 1 ? t('devices.hiddenWifiOne', { name: deviceName(hiddenWifi[0].serial) }) : t('devices.hiddenWifiMany', { n: hiddenWifi.length }),
   );
@@ -53,6 +66,18 @@
           <button type="button" aria-pressed={filter === f} onclick={() => (filter = f)}>{t(labels[f])} {counts[f]}</button>
         {/each}
       </div>
+      <label class="search" data-guide="devices-search">
+        <Icon name="search" size={15} />
+        <input
+          type="search"
+          placeholder={t('devices.searchPh')}
+          aria-label={t('devices.searchLabel')}
+          bind:value={query}
+          onkeydown={(e) => {
+            if (e.key === 'Escape') query = '';
+          }}
+        />
+      </label>
       <div class="spacer"></div>
       <div class="seg views" role="radiogroup" aria-label={t('devices.viewLabel')} data-guide="devices-view">
         {#each VIEWS as v (v.id)}
@@ -115,6 +140,13 @@
         <Icon name="plus" size={18} stroke={2} />
         {t('devices.addHint')}
       </button>
+    {:else if words.length && anyDevice}
+      <div class="card empty">
+        <Icon name="search" size={40} stroke={1.4} />
+        <h2>{t('devices.searchEmpty', { q: query.trim() })}</h2>
+        <p>{t('devices.searchEmptyText')}</p>
+        <button type="button" class="btn" onclick={() => (query = '')}>{t('devices.searchClear')}</button>
+      </div>
     {:else if showHidden}
       <div class="card empty" data-guide="tour-devices">
         <Icon name="connect" size={40} stroke={1.4} />
@@ -180,6 +212,33 @@
   }
   .spacer {
     flex: 1 1 auto;
+  }
+  .search {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 1 260px;
+    min-width: 160px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface);
+    padding: 0 10px;
+    color: var(--muted);
+  }
+  .search:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+  }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 0;
+    outline: none;
   }
   .add {
     display: flex;
