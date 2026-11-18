@@ -3,7 +3,7 @@ import { detectLang, lang, t } from './i18n.svelte';
 import { friendlyName, tcpAddress, terminalSerial } from './format';
 import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
-import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, Settings, Summary } from './types';
+import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, RecentConnection, Settings, Summary } from './types';
 import { isFlowSerial, onUsbReady, recentlyHandled } from './wififlow.svelte';
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wifiPort: 5555,
   usbToWifiSkip: [],
   devicesView: 'grid',
+  devicesSort: { key: 'name', dir: 'asc' },
   mirrorQuality: 'medium',
   mirrorFps: 30,
   mirrorControl: true,
@@ -474,9 +475,21 @@ export async function reconnect(serial: string): Promise<boolean> {
 export function addRecent(address: string, name: string, serial?: string | null): void {
   const old = app.settings.recentConnections.find((r) => r.address === address);
   const list = app.settings.recentConnections.filter((r) => r.address !== address);
-  list.push({ address, name, at: Date.now(), serial: serial ?? old?.serial });
+  // Conectar pelo endereço (IP ou recente) não traz nome: mantém o que já se sabia do aparelho.
+  const keep = old && (!name || name === address) ? old.name : name;
+  list.push({ address, name: keep, at: Date.now(), serial: serial ?? old?.serial });
   app.settings.recentConnections = list.slice(-12);
   saveSettings();
+}
+
+/**
+ * Conexão recente que já está no ar: o endereço está pronto na lista do adb, ou o mesmo terminal
+ * (pelo serial dele) está pronto por Wi-Fi com outro nome, como o do mDNS. Conectar de novo não adianta.
+ */
+export function recentConnected(r: RecentConnection): boolean {
+  if (app.devices.some((d) => d.serial === r.address && d.stateKind === 'device')) return true;
+  if (!r.serial) return false;
+  return app.devices.some((d) => d.connection === 'wifi' && d.stateKind === 'device' && identities(d.serial, false).includes(r.serial!));
 }
 
 /** O resumo de um aparelho de rede chegou: guarda o serial e o nome na conexão recente. */

@@ -23,6 +23,12 @@ if (params.has('lang')) settings.language = params.get('lang');
 if (params.has('theme')) settings.theme = params.get('theme');
 if (params.has('light')) settings.lightTheme = params.get('light');
 if (params.has('dark')) settings.darkTheme = params.get('dark');
+// ?recent: conexões recentes, uma já conectada (o P2 do mock) e outra fora do ar.
+if (params.has('recent'))
+  settings.recentConnections = [
+    { address: '192.168.0.55:5555', name: 'Sunmi V2 Pro', at: Date.now() - 86_400_000 },
+    { address: '192.168.0.42:5555', name: 'Sunmi P2', at: Date.now() - 3_600_000 },
+  ];
 
 let DEVICES: Device[] = [
   { serial: '7A1B2C3D', state: 'device', stateKind: 'device', connection: 'usb', usb: '1-4', product: 'GPOS760', model: 'GPOS760', device: 'GPOS760', transportId: '3' },
@@ -187,6 +193,12 @@ function output(rest: string[], serial: string | null): { code: number; stdout: 
       if (failConnect) return { code: 0, stdout: `failed to connect to ${rest[1]}: Connection refused\n`, stderr: '' };
       setTimeout(() => {
         DEVICES = [...DEVICES.filter((d) => d.serial !== rest[1]), { ...NEW_USB, serial: rest[1], connection: 'wifi', usb: null, transportId: '12' }];
+        emit('devices', { devices: DEVICES, first: false });
+      }, 300);
+    } else if (!DEVICES.some((d) => d.serial === rest[1])) {
+      // Outro endereço: entra na lista como o adb real faria (Conectar dos recentes vira "Conectado").
+      setTimeout(() => {
+        DEVICES = [...DEVICES, { serial: rest[1], state: 'device', stateKind: 'device', connection: 'wifi', product: 'V2PRO', model: 'V2_PRO', device: 'V2PRO', transportId: '13' }];
         emit('devices', { devices: DEVICES, first: false });
       }, 300);
     }
