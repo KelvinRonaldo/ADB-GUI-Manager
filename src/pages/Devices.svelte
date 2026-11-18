@@ -4,10 +4,63 @@
   import DeviceRow from '../components/DeviceRow.svelte';
   import PageGuideOffer from '../components/PageGuideOffer.svelte';
   import Icon from '../components/Icon.svelte';
-  import { t } from '../lib/i18n.svelte';
+  import { lang, t, type Key } from '../lib/i18n.svelte';
   import { app, deviceName, hiddenByUsb, listedDevices, navigate, saveSettings } from '../lib/state.svelte';
   import { serialOf } from '../lib/deviceView';
-  import type { DevicesView } from '../lib/types';
+  import { DEFAULT_SORT, nameSort, nextSort, sortRows, type SortRow } from '../lib/sorting';
+  import type { Device, DevicesSort, DevicesSortKey, DevicesView } from '../lib/types';
+
+  const VIEWS = [
+    { id: 'grid', icon: 'viewGrid', label: 'devices.viewGrid' },
+    { id: 'list', icon: 'viewList', label: 'devices.viewList' },
+    { id: 'compact', icon: 'viewCompact', label: 'devices.viewCompact' },
+  ] as const;
+  const view = $derived<DevicesView>(app.settings.devicesView ?? 'grid');
+  function setView(v: DevicesView) {
+    if (app.settings.devicesView === v) return;
+    app.settings.devicesView = v;
+    saveSettings();
+  }
+
+  // Lista: ordena pela coluna clicada. Grade e simplificada: só pelo nome, no seletor.
+  const saved = $derived<DevicesSort>(app.settings.devicesSort ?? DEFAULT_SORT);
+  const sort = $derived(view === 'list' ? saved : nameSort(saved));
+  function setSort(next: DevicesSort) {
+    app.settings.devicesSort = next;
+    saveSettings();
+  }
+  /** O nome que o cartão e a linha mostram: sem autorização, o aparelho aparece pelo aviso. */
+  function shownName(serial: string): string {
+    const k = app.devices.find((d) => d.serial === serial)?.stateKind;
+    if (k === 'unauthorized') return t('devices.unauthorizedTitle');
+    if (k === 'noPermissions') return t('devices.noPermTitle');
+    return deviceName(serial);
+  }
+  function rowOf(serial: string, conn: Device['connection']): SortRow {
+    const s = app.summaries[serial];
+    const st = s?.storage;
+    return {
+      serial,
+      name: shownName(serial),
+      conn,
+      id: serialOf(serial, s) ?? serial,
+      battery: s?.battery?.level ?? null,
+      ip: s?.wifiIp ?? null,
+      storage: st && st.totalKb > 0 ? st.usedKb / st.totalKb : null,
+    };
+  }
+  function sorted<T>(items: T[], key: (x: T) => SortRow): T[] {
+    const rows = items.map((x) => ({ ...key(x), item: x }));
+    return sortRows(rows, sort, lang.current).map((r) => r.item);
+  }
+  const COLS: { key: DevicesSortKey; label: Key; cls?: string }[] = [
+    { key: 'name', label: 'devices.colDevice' },
+    { key: 'conn', label: 'devices.colConn' },
+    { key: 'id', label: 'devices.colId' },
+    { key: 'battery', label: 'devices.battery', cls: 'h-bat' },
+    { key: 'ip', label: 'devices.colWifi', cls: 'h-ip' },
+    { key: 'storage', label: 'devices.storage', cls: 'h-sto' },
+  ];
 
   let filter = $state<'all' | 'usb' | 'wifi' | 'emulator'>('all');
   let query = $state('');
@@ -27,10 +80,18 @@
     wifi: listed.filter((d) => d.connection === 'wifi').length,
     emulator: listed.filter((d) => d.connection === 'emulator').length,
   });
-  const shown = $derived(listed.filter((d) => filter === 'all' || d.connection === filter));
+  const shown = $derived(
+    sorted(
+      listed.filter((d) => filter === 'all' || d.connection === filter),
+      (d) => rowOf(d.serial, d.connection),
+    ),
+  );
   const lost = $derived(
-    Object.values(app.lost).filter(
-      (l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi') && matches(l.serial),
+    sorted(
+      Object.values(app.lost).filter(
+        (l) => !app.devices.some((d) => d.serial === l.serial) && !hiddenByUsb(l.serial) && (filter === 'all' || filter === 'wifi') && matches(l.serial),
+      ),
+      (l) => rowOf(l.serial, 'wifi'),
     ),
   );
   // Entradas Wi-Fi ocultas porque o mesmo aparelho está no USB: avisa em vez de parecer que sumiram.
@@ -42,18 +103,6 @@
   );
   const hiddenText = $derived(t(hiddenWifi.length === 1 ? 'devices.hiddenWifiTextOne' : 'devices.hiddenWifiTextMany'));
   const labels = { all: 'devices.all', usb: 'conn.usb', wifi: 'conn.wifi', emulator: 'conn.emulator' } as const;
-
-  const VIEWS = [
-    { id: 'grid', icon: 'viewGrid', label: 'devices.viewGrid' },
-    { id: 'list', icon: 'viewList', label: 'devices.viewList' },
-    { id: 'compact', icon: 'viewCompact', label: 'devices.viewCompact' },
-  ] as const;
-  const view = $derived<DevicesView>(app.settings.devicesView ?? 'grid');
-  function setView(v: DevicesView) {
-    if (app.settings.devicesView === v) return;
-    app.settings.devicesView = v;
-    saveSettings();
-  }
 </script>
 
 <div class="page">
@@ -78,6 +127,18 @@
           }}
         />
       </label>
+      {#if view !== 'list'}
+        <select
+          class="select sortsel"
+          aria-label={t('devices.sortLabel')}
+          title={t('devices.sortLabel')}
+          value={sort.dir}
+          onchange={(e) => setSort({ key: 'name', dir: e.currentTarget.value as DevicesSort['dir'] })}
+        >
+          <option value="asc">{t('devices.sortNameAsc')}</option>
+          <option value="desc">{t('devices.sortNameDesc')}</option>
+        </select>
+      {/if}
       <div class="spacer"></div>
       <div class="seg views" role="radiogroup" aria-label={t('devices.viewLabel')} data-guide="devices-view">
         {#each VIEWS as v (v.id)}
@@ -118,12 +179,15 @@
             {#if view === 'list'}
               <div class="dhead" role="row">
                 <span></span>
-                <span role="columnheader">{t('devices.colDevice')}</span>
-                <span role="columnheader">{t('devices.colConn')}</span>
-                <span role="columnheader">{t('devices.colId')}</span>
-                <span role="columnheader" class="h-bat">{t('devices.battery')}</span>
-                <span role="columnheader" class="h-ip">{t('devices.colWifi')}</span>
-                <span role="columnheader" class="h-sto">{t('devices.storage')}</span>
+                {#each COLS as c (c.key)}
+                  {@const on = sort.key === c.key}
+                  <span role="columnheader" class={c.cls} aria-sort={on ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+                    <button type="button" class="sorth" class:on title={t('devices.sortBy', { col: t(c.label) })} onclick={() => setSort(nextSort(sort, c.key))}>
+                      <span>{t(c.label)}</span>
+                      <Icon name={on && sort.dir === 'desc' ? 'down' : 'up'} size={13} stroke={2.2} />
+                    </button>
+                  </span>
+                {/each}
                 <span></span>
               </div>
             {/if}
@@ -203,6 +267,52 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--muted);
+  }
+  .sorth {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    max-width: 100%;
+    margin: -4px -6px;
+    padding: 4px 6px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+  }
+  .sorth span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* A seta só aparece na coluna da ordem; nas outras, de leve ao passar o mouse. */
+  .sorth :global(svg) {
+    flex: none;
+    opacity: 0;
+  }
+  .sorth:hover {
+    color: var(--text);
+    background: var(--surface);
+  }
+  .sorth:hover :global(svg) {
+    opacity: 0.45;
+  }
+  .sorth.on {
+    color: var(--text);
+  }
+  .sorth.on :global(svg) {
+    opacity: 1;
+  }
+  .sorth:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  .sortsel {
+    flex: none;
+    width: auto;
+    font-size: 13px;
   }
   .grid {
     display: grid;

@@ -144,6 +144,12 @@ export type LightPalette = 'classic' | 'lavender' | 'sun';
 export type DarkPalette = 'classic' | 'forest' | 'plum';
 /** Como a lista de aparelhos aparece: cartões, linhas com os mesmos dados ou só o essencial. */
 export type DevicesView = 'grid' | 'list' | 'compact';
+/** Ordem da tela Aparelhos: na lista, pela coluna clicada; na grade e na simplificada, só pelo nome. */
+export type DevicesSortKey = 'name' | 'conn' | 'id' | 'battery' | 'ip' | 'storage';
+export interface DevicesSort {
+  key: DevicesSortKey;
+  dir: 'asc' | 'desc';
+}
 export type Lang = 'pt-BR' | 'en-US';
 
 export interface Settings {
@@ -176,6 +182,7 @@ export interface Settings {
   /** Seriais que o usuário pediu para não passar sozinhos. */
   usbToWifiSkip: string[];
   devicesView: DevicesView;
+  devicesSort: DevicesSort;
   /** Espelhamento: qualidade (low/medium/high/original), fps e controle. */
   mirrorQuality: string;
   mirrorFps: number;

@@ -9,7 +9,7 @@
   import { api, listen } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
   import { formatDate } from '../lib/format';
-  import { addRecent, app, connectAddress, deviceName, readyDevices, restartServer, saveSettings, toast } from '../lib/state.svelte';
+  import { addRecent, app, connectAddress, deviceName, readyDevices, recentConnected, restartServer, saveSettings, toast } from '../lib/state.svelte';
   import { runReport } from '../lib/actions';
   import { startWifiFlow } from '../lib/wififlow.svelte';
   import type { MdnsService, StreamEvent } from '../lib/types';
@@ -43,6 +43,8 @@
   let usbSerial = $state('');
   let usbPort = $state(String(app.settings.wifiPort || 5555));
   let ipAddress = $state('');
+  /** Endereço da lista de recentes que está conectando agora. */
+  let connectingRecent = $state('');
 
   // QR
   let qrName = $state('');
@@ -247,6 +249,15 @@
     }
   }
 
+  async function connectRecent(address: string) {
+    connectingRecent = address;
+    try {
+      await doIp(address);
+    } finally {
+      connectingRecent = '';
+    }
+  }
+
   function forget(address: string) {
     app.settings.recentConnections = app.settings.recentConnections.filter((r) => r.address !== address);
     saveSettings();
@@ -446,12 +457,19 @@
           <div class="list" data-guide="connect-recent">
             <h3 class="section-title">{t('connect.recent')}</h3>
             {#each app.settings.recentConnections as r (r.address)}
+              {@const on = recentConnected(r)}
               <div class="li">
                 <div class="grow">
                   <div class="strong">{r.name}{#if r.serial}<span class="mono muted small sn">{t('connect.recentSerial', { serial: r.serial })}</span>{/if}</div>
                   <div class="mono muted small addr"><span>{r.address}</span><span>{formatDate(r.at, lang.current)}</span></div>
                 </div>
-                <button type="button" class="btn sm" disabled={busy} onclick={() => doIp(r.address)}>{t('common.connect')}</button>
+                {#if on}
+                  <span class="chip sm ok" title={t('connect.recentConnectedTitle')}><Icon name="check" size={13} stroke={2.2} />{t('connect.recentConnected')}</span>
+                {:else}
+                  <button type="button" class="btn sm" disabled={busy} onclick={() => connectRecent(r.address)}>
+                    {connectingRecent === r.address ? t('connect.recentConnecting') : t('common.connect')}
+                  </button>
+                {/if}
                 <button type="button" class="btn sm icon ghost" aria-label={t('connect.forgetLabel')} title={t('connect.forgetLabel')} onclick={() => forget(r.address)}><Icon name="close" size={14} /></button>
               </div>
             {:else}
