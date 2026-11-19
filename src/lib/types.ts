@@ -126,6 +126,33 @@ export interface RecentConnection {
   at: number;
   /** Serial do terminal (etiqueta), quando já se conhece. */
   serial?: string;
+  /** Todos os seriais do aparelho (terminal, ro.serialno…): reencontram o aparelho quando o IP muda. */
+  ids?: string[];
+  /** MAC do Wi-Fi visto na tabela ARP do PC. */
+  mac?: string;
+  /** Último reencontro: de qual endereço veio, por qual caminho e quando. */
+  prevAddress?: string;
+  foundBy?: RediscoverPath;
+  foundAt?: number;
+}
+
+/** Caminhos para reencontrar um aparelho cujo IP mudou, na ordem em que são tentados. */
+export type RediscoverPath = 'mdns' | 'arp' | 'port';
+
+export interface NetInfo {
+  localIp: string | null;
+  subnet: string | null;
+}
+
+export interface SweepResult {
+  open: string[];
+  arp: Record<string, string>;
+  scanned: number;
+}
+
+export interface NetIdentity {
+  address: string;
+  props: Record<string, string>;
 }
 
 export interface SavedCommand {
@@ -183,6 +210,12 @@ export interface Settings {
   usbToWifiSkip: string[];
   devicesView: DevicesView;
   devicesSort: DevicesSort;
+  /** Procurar sozinho o aparelho Wi-Fi que caiu (o IP pode ter mudado). */
+  rediscoverAuto: boolean;
+  /** Caminhos ligados para reencontrar aparelhos. */
+  rediscoverPaths: RediscoverPath[];
+  /** Faixas extras a varrer, além da sub-rede do PC ("10.0.5.0/24"). */
+  rediscoverRanges: string[];
   /** Espelhamento: qualidade (low/medium/high/original), fps e controle. */
   mirrorQuality: string;
   mirrorFps: number;

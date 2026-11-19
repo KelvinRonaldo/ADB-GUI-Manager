@@ -1,6 +1,6 @@
 [package]
 name = "adb-gui-manager"
-version = "0.3.23"
+version = "0.4.0"
 description = "Interface gráfica para o adb"
 authors = ["Kelvin Ronaldo"]
 edition = "2021"
@@ -29,6 +29,8 @@ tauri-plugin-clipboard-manager = "2"
 tauri-plugin-single-instance = "2"
 base64 = "0.22"
 socket2 = { version = "0.6", features = ["all"] }
+rsa = "0.9"
+sha1 = { version = "0.10", features = ["oid"] }
 
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"

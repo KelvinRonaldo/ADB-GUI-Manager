@@ -9,7 +9,7 @@
   import { classify, type AdbError } from '../lib/errors';
   import { formatBytes } from '../lib/format';
   import { adbChanged, app, applyTheme, checkServer, confirmDialog, restartServer, saveSettings, setLanguage, startTour, toast } from '../lib/state.svelte';
-  import type { AdbVersion, DarkPalette, LightPalette, Settings, Theme } from '../lib/types';
+  import type { AdbVersion, DarkPalette, LightPalette, RediscoverPath, Settings, Theme } from '../lib/types';
   import UpdateError from '../components/UpdateError.svelte';
   import { checkUpdates, openReleases, packageLabel, upd, whenText } from '../lib/update.svelte';
 
@@ -31,6 +31,37 @@
   let progress = $state<{ received: number; total?: number | null; phase: string } | null>(null);
   let downloadedExists = $state(app.init?.downloadedExists ?? false);
   let serverBusy = $state(false);
+
+  // Reencontrar aparelhos: sub-rede detectada e faixas extras (texto, uma por linha).
+  let rdSubnet = $state('');
+  let rdRanges = $state((app.settings.rediscoverRanges ?? []).join('\n'));
+  api
+    .netInfo()
+    .then((n) => (rdSubnet = n.subnet ?? ''))
+    .catch(() => undefined);
+  const RD_PATHS = [
+    { id: 'mdns', label: 'rd.path.mdns', text: 'settings.rdMdns' },
+    { id: 'arp', label: 'rd.path.arp', text: 'settings.rdArp' },
+    { id: 'port', label: 'rd.path.port', text: 'settings.rdPort' },
+  ] as const;
+  function toggleRdPath(id: RediscoverPath, on: boolean) {
+    const cur = app.settings.rediscoverPaths ?? ['mdns', 'arp', 'port'];
+    app.settings.rediscoverPaths = RD_PATHS.map((p) => p.id).filter((p) => (p === id ? on : cur.includes(p)));
+    saveSettings();
+  }
+  function saveRanges() {
+    app.settings.rediscoverRanges = rdRanges
+      .split(/[\n,;]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    saveSettings();
+  }
+  async function forgetKnown() {
+    const { ok } = await confirmDialog({ title: t('settings.rdForget'), text: t('settings.rdKnown', { n: app.settings.recentConnections.length }), confirmLabel: t('settings.rdForget'), danger: true });
+    if (!ok) return;
+    app.settings.recentConnections = [];
+    saveSettings();
+  }
 
   const KNOWN = ['ANDROID_SERIAL', 'ADB_TRACE', 'ADB_VENDOR_KEYS', 'ADB_MDNS_AUTO_CONNECT', 'ADB_MDNS_OPENSCREEN', 'ADB_LIBUSB', 'ANDROID_LOG_TAGS', 'ADB_LOCAL_TRANSPORT_MAX_PORT'];
   const HINTS: Record<string, string> = {
@@ -273,6 +304,34 @@
         {/if}
       </section>
 
+      <section class="card sec" id="settings-rediscover">
+        <h2>{t('settings.rediscover')}</h2>
+        <div class="muted small">{t('settings.rdText')}</div>
+        <label class="check top">
+          <input type="checkbox" bind:checked={app.settings.rediscoverAuto} onchange={saveSettings} />
+          <span>{t('settings.rdAuto')}<br /><span class="muted small">{t('settings.rdAutoText')}</span></span>
+        </label>
+        <div class="small strong">{t('settings.rdPaths')}</div>
+        {#each RD_PATHS as p, i (p.id)}
+          <label class="check top">
+            <input type="checkbox" checked={(app.settings.rediscoverPaths ?? []).includes(p.id)} onchange={(e) => toggleRdPath(p.id, e.currentTarget.checked)} />
+            <span>{i + 1}. {t(p.label)}<br /><span class="muted small">{t(p.text)}</span></span>
+          </label>
+        {/each}
+        <div class="small">{t('settings.rdSubnet')} <span class="mono">{rdSubnet || t('settings.rdNoSubnet')}</span></div>
+        <label class="field"
+          ><span class="small strong">{t('settings.rdRanges')}</span>
+          <textarea id="rd-ranges" class="input mono area" rows="2" placeholder="10.0.5.0/24" bind:value={rdRanges} onchange={saveRanges}></textarea>
+          <span class="muted small">{t('settings.rdRangesText')}</span></label
+        >
+        {#if app.settings.recentConnections.length}
+          <div class="row">
+            <span class="muted small">{t('settings.rdKnown', { n: app.settings.recentConnections.length })}</span>
+            <button type="button" class="btn sm" onclick={forgetKnown}>{t('settings.rdForget')}</button>
+          </div>
+        {/if}
+      </section>
+
       <section class="card sec" data-guide="settings-env">
         <h2>{t('settings.env')}</h2>
         {#each envNames as name (name)}
@@ -450,6 +509,17 @@
 </div>
 
 <style>
+  .check.top {
+    align-items: flex-start;
+  }
+  .check.top input {
+    margin-top: 3px;
+  }
+  .area {
+    height: auto;
+    padding: 6px 10px;
+    resize: vertical;
+  }
   .hint {
     font-weight: 400;
   }

@@ -8,11 +8,14 @@ import type {
   InitInfo,
   LocalEntry,
   MdnsService,
+  NetIdentity,
+  NetInfo,
   Package,
   RemoteEntry,
   RunResult,
   Settings,
   Summary,
+  SweepResult,
   UpdateCheck,
   UpdateInfo,
 } from './types';
@@ -86,6 +89,10 @@ export const api = {
   ptyClose: (id: number) => invoke<void>('pty_close', { id }),
   summary: (serial: string, quiet = true) => invoke<Summary>('device_summary', { serial, quiet }),
   mdns: (quiet = true, targets: string[] = []) => invoke<MdnsService[]>('mdns_services', { quiet, targets }),
+  netInfo: () => invoke<NetInfo>('net_info'),
+  netSweep: (ranges: string[], port = 5555) => invoke<SweepResult>('net_sweep', { ranges, port }),
+  netArp: () => invoke<Record<string, string>>('net_arp'),
+  netIdentify: (address: string) => invoke<NetIdentity>('net_identify', { address }),
   remoteList: (serial: string, path: string, runAs: string | null = null) =>
     invoke<{ entries: RemoteEntry[]; result: RunResult }>('remote_list', { serial, path, runAs }),
   packages: (serial: string, filter: string) =>

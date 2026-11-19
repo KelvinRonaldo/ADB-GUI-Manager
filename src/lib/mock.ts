@@ -26,7 +26,7 @@ if (params.has('dark')) settings.darkTheme = params.get('dark');
 // ?recent: conexões recentes, uma já conectada (o P2 do mock) e outra fora do ar.
 if (params.has('recent'))
   settings.recentConnections = [
-    { address: '192.168.0.55:5555', name: 'Sunmi V2 Pro', at: Date.now() - 86_400_000 },
+    { address: '192.168.0.55:5555', name: 'Sunmi V2 Pro', at: Date.now() - 86_400_000, serial: 'V2P0055', ids: ['V2P0055'], mac: '3c:2e:ff:01:02:55' },
     { address: '192.168.0.42:5555', name: 'Sunmi P2', at: Date.now() - 3_600_000 },
   ];
 
@@ -422,6 +422,19 @@ export async function mockInvoke(cmd: string, a: Record<string, unknown> = {}): 
         raw: Object.entries(PROPS[serial] ?? {}).map(([k, v]) => `[${k}]: [${v}]`).join('\n'),
         result: { id: 0, cmd: '', code: 0, stdout: '', stderr: '', durationMs: 120, timedOut: false },
       };
+    }
+    // Reencontrar: o "Sunmi V2 Pro" dos recentes (?recent) mudou de .55 para .93.
+    case 'net_info':
+      return { localIp: '192.168.0.10', subnet: '192.168.0.0/24' };
+    case 'net_arp':
+      return { '192.168.0.42': '3c:2e:ff:01:02:42' };
+    case 'net_sweep':
+      await new Promise((r) => setTimeout(r, 1500));
+      return { open: ['192.168.0.42', '192.168.0.93'], arp: { '192.168.0.42': '3c:2e:ff:01:02:42', '192.168.0.93': '3c:2e:ff:01:02:55' }, scanned: 254 };
+    case 'net_identify': {
+      await new Promise((r) => setTimeout(r, 400));
+      if (String(a.address).startsWith('192.168.0.93')) return { address: a.address, props: { 'ro.sunmi.serial': 'V2P0055', 'ro.product.model': 'V2_PRO' } };
+      throw 'NOT_AUTHORIZED';
     }
     case 'mdns_services':
       return [

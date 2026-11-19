@@ -5,6 +5,7 @@ import { classify, type AdbError, type ErrorAction } from './errors';
 import { PAGE_GUIDES, TOUR } from './guides';
 import type { AdbInfo, Candidate, Device, InitInfo, LogEntry, Page, RecentConnection, Settings, Summary } from './types';
 import { isFlowSerial, onUsbReady, recentlyHandled } from './wififlow.svelte';
+import { rediscover, rememberIdentity, searchable } from './rediscover.svelte';
 
 export const DEFAULT_SETTINGS: Settings = {
   adbMode: 'auto',
@@ -41,6 +42,9 @@ export const DEFAULT_SETTINGS: Settings = {
   usbToWifiSkip: [],
   devicesView: 'grid',
   devicesSort: { key: 'name', dir: 'asc' },
+  rediscoverAuto: true,
+  rediscoverPaths: ['mdns', 'arp', 'port'],
+  rediscoverRanges: [],
   mirrorQuality: 'medium',
   mirrorFps: 30,
   mirrorControl: true,
@@ -378,6 +382,7 @@ function onDevices(list: Device[], first = false): void {
     const becameReady = d.stateKind === 'device' && (!prev || prev.stateKind !== 'device');
     if (app.lost[d.serial] && d.stateKind === 'device') {
       delete app.lost[d.serial];
+      searchedLoss.delete(d.serial);
       toast(t('act.reconnected', { name: deviceName(d.serial) }), 'success');
     } else if (!initial && becameReady && d.connection === 'usb' && app.settings.usbToWifi !== 'off' && !app.settings.usbToWifiSkip.includes(d.serial)) {
       // USB novo com o app aberto: o resumo chega antes do nome, então espera um pouco.
@@ -429,11 +434,23 @@ export async function retryLost(serial: string): Promise<boolean> {
     cur.busy = false;
     cur.nextAt = Date.now() + RETRY_EVERY_MS;
     if (cur.attempts >= MAX_RETRIES) cur.gaveUp = true;
+    autoRediscover(serial, cur.attempts);
   }
   return !error;
 }
 
+/** Wi-Fi que caiu e não voltou em duas tentativas: o IP pode ter mudado. Procura uma vez por queda. */
+const searchedLoss = new Set<string>();
+function autoRediscover(serial: string, attempts: number): void {
+  if (attempts < 2 || !app.settings.rediscoverAuto || searchedLoss.has(serial)) return;
+  const r = app.settings.recentConnections.find((x) => x.address === serial);
+  if (!r || !searchable(r)) return;
+  searchedLoss.add(serial);
+  rediscover([serial], true);
+}
+
 export function forgetLost(serial: string): void {
+  searchedLoss.delete(serial);
   delete app.lost[serial];
 }
 
@@ -496,6 +513,7 @@ export function recentConnected(r: RecentConnection): boolean {
 function noteRecent(address: string, s: Summary): void {
   const r = app.settings.recentConnections.find((x) => x.address === address);
   if (!r) return;
+  rememberIdentity(address, s.props);
   const serial = terminalSerial(s.props) ?? undefined;
   const dev = app.devices.find((d) => d.serial === address);
   const name = dev ? friendlyName(dev, s) : r.name;
