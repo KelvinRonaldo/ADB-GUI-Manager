@@ -478,3 +478,59 @@ pub fn mirror_control(st: St<'_>, id: u64, msg: Vec<u8>) -> Result<(), String> {
 pub fn mirror_stop(st: St<'_>, id: u64) {
     crate::mirror::stop(&st, id);
 }
+
+// ---------- reencontrar aparelhos (IP trocado pelo DHCP) ----------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NetInfo {
+    /// IP do PC na interface que sai para a rede e a /24 dele.
+    pub local_ip: Option<String>,
+    pub subnet: Option<String>,
+}
+
+#[tauri::command]
+pub fn net_info() -> NetInfo {
+    match crate::net::local_subnet() {
+        Some((ip, net)) => NetInfo { local_ip: Some(ip.to_string()), subnet: Some(net) },
+        None => NetInfo { local_ip: None, subnet: None },
+    }
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SweepResult {
+    /// Endereços com a porta aberta.
+    pub open: Vec<String>,
+    /// Tabela ARP depois da varredura (IP → MAC).
+    pub arp: BTreeMap<String, String>,
+    pub scanned: usize,
+}
+
+/// Testa a porta em todas as faixas; o teste também enche a tabela ARP, devolvida junto.
+#[tauri::command]
+pub async fn net_sweep(ranges: Vec<String>, port: Option<u16>) -> Result<SweepResult, String> {
+    let mut ips = Vec::new();
+    for r in &ranges {
+        for ip in crate::net::hosts(r)? {
+            if !ips.contains(&ip) {
+                ips.push(ip);
+            }
+        }
+    }
+    let scanned = ips.len();
+    let open = crate::net::sweep(ips, port.unwrap_or(5555), std::time::Duration::from_millis(600), 128).await;
+    let arp = crate::net::arp_table().await;
+    Ok(SweepResult { open: open.iter().map(|i| i.to_string()).collect(), arp, scanned })
+}
+
+#[tauri::command]
+pub async fn net_arp() -> BTreeMap<String, String> {
+    crate::net::arp_table().await
+}
+
+/// Serial do aparelho em `address` pelo aperto de mão do adb ("NOT_AUTHORIZED" se ele não conhece a chave do PC).
+#[tauri::command]
+pub async fn net_identify(address: String) -> Result<crate::net::Identity, String> {
+    crate::net::identify(&address, std::time::Duration::from_secs(4)).await
+}

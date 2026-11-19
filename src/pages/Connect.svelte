@@ -9,11 +9,13 @@
   import { api, listen } from '../lib/ipc';
   import { classify, type AdbError } from '../lib/errors';
   import { formatDate } from '../lib/format';
-  import { addRecent, app, connectAddress, deviceName, readyDevices, recentConnected, restartServer, saveSettings, toast } from '../lib/state.svelte';
+  import { addRecent, app, connectAddress, deviceName, navigate, readyDevices, recentConnected, restartServer, saveSettings, toast } from '../lib/state.svelte';
   import { runReport } from '../lib/actions';
   import { startWifiFlow } from '../lib/wififlow.svelte';
+  import { closePanel, rediscover, search, searchable, stopRediscover } from '../lib/rediscover.svelte';
   import type { MdnsService, StreamEvent } from '../lib/types';
 
+  const PATH_LABEL = { mdns: 'rd.path.mdns', arp: 'rd.path.arp', port: 'rd.path.port' } as const;
   type WTab = 'pair' | 'usb' | 'ip';
   let wtab = $state<WTab>('pair');
 
@@ -249,6 +251,11 @@
     }
   }
 
+  function openRdSettings() {
+    navigate('settings');
+    setTimeout(() => document.getElementById('settings-rediscover')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 120);
+  }
+
   async function connectRecent(address: string) {
     connectingRecent = address;
     try {
@@ -454,18 +461,57 @@
               <div class="muted small">{t('connect.mdnsEmpty')}</div>
             {/each}
           </div>
-          <div class="list" data-guide="connect-recent">
-            <h3 class="section-title">{t('connect.recent')}</h3>
+          <div class="list known" data-guide="connect-recent">
+            <div class="known-head">
+              <h3 class="section-title">{t('connect.recent')}</h3>
+              <button type="button" class="btn sm icon ghost" title={t('rd.settings')} aria-label={t('rd.settings')} onclick={openRdSettings}><Icon name="settings" size={15} /></button>
+              <button type="button" class="btn sm primary" disabled={search.running || !app.settings.recentConnections.some(searchable)} onclick={() => rediscover()}>
+                <Icon name="search" size={14} stroke={2} />{search.running ? t('rd.searching') : t('rd.search')}
+              </button>
+            </div>
+            <div class="muted small">{t('rd.hint')}</div>
+            {#if search.open}
+              <div class="rd-panel" role="status" aria-live="polite">
+                <div class="rd-top">
+                  <strong class="grow">{search.running ? t('rd.panelRunning', { n: search.total }) : t('rd.panelDone', { found: search.found, total: search.total })}</strong>
+                  {#if search.running}
+                    <button type="button" class="btn sm" onclick={stopRediscover}>{t('rd.stop')}</button>
+                  {:else}
+                    <button type="button" class="btn sm icon ghost" aria-label={t('common.close')} title={t('common.close')} onclick={closePanel}><Icon name="close" size={14} /></button>
+                  {/if}
+                </div>
+                {#if search.subnet}<div class="mono muted small">{search.subnet}</div>{/if}
+                {#each search.steps as st (st.path)}
+                  <div class="rd-step {st.state}">
+                    <span class="rd-dot" aria-hidden="true">
+                      {#if st.state === 'done'}<Icon name="check" size={12} stroke={2.6} />{:else if st.state === 'run'}<Icon name="spinner" size={12} />{:else if st.state === 'fail'}<Icon name="close" size={12} stroke={2.4} />{/if}
+                    </span>
+                    <span class="grow"><strong>{t(PATH_LABEL[st.path])}</strong> <span class="muted">{st.state === 'skip' && !st.text ? t('rd.off') : st.text}</span>
+                      {#if st.state === 'run' && st.total}<span class="muted"> · {st.done ?? 0}/{st.total}</span>{/if}</span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
             {#each app.settings.recentConnections as r (r.address)}
               {@const on = recentConnected(r)}
+              {@const rs = search.targets[r.address]}
               <div class="li">
                 <div class="grow">
                   <div class="strong">{r.name}{#if r.serial}<span class="mono muted small sn">{t('connect.recentSerial', { serial: r.serial })}</span>{/if}</div>
                   <div class="mono muted small addr"><span>{r.address}</span><span>{formatDate(r.at, lang.current)}</span></div>
+                  {#if r.prevAddress && r.foundBy}
+                    <div class="muted small">{t('rd.movedFrom', { old: r.prevAddress.split(':')[0], by: t(PATH_LABEL[r.foundBy]) })}{#if r.foundAt} · {formatDate(r.foundAt, lang.current)}{/if}</div>
+                  {/if}
                 </div>
                 {#if on}
                   <span class="chip sm ok" title={t('connect.recentConnectedTitle')}><Icon name="check" size={13} stroke={2.2} />{t('connect.recentConnected')}</span>
+                {:else if rs === 'searching'}
+                  <span class="chip sm usb"><Icon name="spinner" size={13} />{t('rd.searchingOne')}</span>
                 {:else}
+                  {#if rs === 'notFound'}<span class="chip sm err" title={t('rd.notFoundTitle')}>{t('rd.notFound')}</span>{/if}
+                  {#if searchable(r)}
+                    <button type="button" class="btn sm icon" disabled={search.running} title={t('rd.searchOne')} aria-label={t('rd.searchOne')} onclick={() => rediscover([r.address])}><Icon name="search" size={14} /></button>
+                  {/if}
                   <button type="button" class="btn sm" disabled={busy} onclick={() => connectRecent(r.address)}>
                     {connectingRecent === r.address ? t('connect.recentConnecting') : t('common.connect')}
                   </button>
@@ -705,6 +751,66 @@
   }
   .list h3 {
     margin-bottom: 4px;
+  }
+  .list.known {
+    flex: 2 1 380px;
+  }
+  .known-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .known-head h3 {
+    flex: 1 1 auto;
+    margin-bottom: 0;
+  }
+  .rd-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 6px 0;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-2);
+    font-size: 13px;
+  }
+  .rd-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rd-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .rd-dot {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    margin-top: 1px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-3);
+    color: var(--muted);
+  }
+  .rd-step.done .rd-dot {
+    background: var(--ok-bg);
+    color: var(--ok-fg);
+  }
+  .rd-step.run .rd-dot {
+    background: var(--accent);
+    color: var(--bg);
+  }
+  .rd-step.fail .rd-dot {
+    background: var(--err-bg, var(--surface-3));
+    color: var(--err-fg, var(--text));
+  }
+  .rd-step.skip {
+    opacity: 0.6;
   }
   .li {
     display: flex;

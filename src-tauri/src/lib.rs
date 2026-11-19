@@ -5,6 +5,7 @@ mod files;
 mod locate;
 mod mdns;
 mod mirror;
+mod net;
 mod parse;
 mod pty;
 mod runner;
@@ -144,6 +145,10 @@ pub fn run() {
             commands::pty_close,
             commands::device_summary,
             commands::mdns_services,
+            commands::net_info,
+            commands::net_sweep,
+            commands::net_arp,
+            commands::net_identify,
             commands::remote_list,
             commands::packages_list,
             commands::local_list,
